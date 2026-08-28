@@ -1,0 +1,40 @@
+PROYECTO 2 - Coach de Fitness (Cloud / Full-stack)
+
+Pitch:
+Plataforma web que organiza tus rutinas reales (las del Excel de gym),
+las estructura por grupo muscular / patron de movimiento, y hace
+seguimiento de progreso con datos reales.
+
+Nucleo tecnico (lo defendible en entrevista):
+- API propia (FastAPI) + base de datos relacional en la nube
+  (Postgres / Supabase).
+- Modelo de datos no trivial: ejercicio -> grupo muscular -> patron de
+  movimiento -> rutina -> progreso.
+- Reuso del modelo de pose del Proyecto 1 (motion-runner-edge-ai) para
+  contar repeticiones / validar forma de ejercicio - feature
+  diferenciadora, no reconocimiento de imagenes generico desde cero.
+
+Stack:
+- FastAPI (Python)
+- Postgres / Supabase
+- Frontend simple (a definir: reutilizar stack conocido o sumar React)
+
+MVP (v1):
+1. Migrar el Excel de rutinas a un esquema de base de datos relacional.
+2. Endpoint que devuelve la rutina del dia.
+3. Dashboard simple de progreso con datos reales (no de ejemplo).
+
+Fuera de alcance v1 (para despues):
+- Reconocimiento de imagenes de fotos de fisico / estimacion visual de
+  composicion corporal.
+- Taxonomia avanzada de "joint actions" / biomecanica.
+- Narrativa de transformacion fisica (se agrega al final, como
+  contenido, sobre datos ya cargados - no es el pitch tecnico).
+
+Fuente de datos real:
+Google Sheet con rutinas y planes de gym actuales del usuario
+(a migrar en el paso 1 del MVP).
+
+Sinergia con Proyecto 1:
+Reutiliza el modelo de pose entrenado/optimizado en
+motion-runner-edge-ai para el conteo de repeticiones.
