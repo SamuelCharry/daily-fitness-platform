@@ -35,7 +35,7 @@ export default function Login() {
         alignItems: 'center',
         justifyContent: 'center',
         background:
-          'radial-gradient(120% 120% at 50% -10%, #1b2024 0%, #14161a 60%, #101214 100%)',
+          'radial-gradient(120% 120% at 50% -10%, #3a0508 0%, #170303 45%, #060606 100%)',
       }}
     >
       <form

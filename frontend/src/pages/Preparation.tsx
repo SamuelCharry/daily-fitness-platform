@@ -68,7 +68,7 @@ export default function Preparation() {
               style={{
                 border: 'none',
                 background: form.current_phase === p ? 'var(--accent)' : 'transparent',
-                color: form.current_phase === p ? 'var(--accent-text)' : '#a9adb1',
+                color: form.current_phase === p ? 'var(--accent-text)' : '#a8a8aa',
                 padding: '7px 16px',
                 borderRadius: 6,
                 font: "600 12px/1 'Inter Tight', sans-serif",

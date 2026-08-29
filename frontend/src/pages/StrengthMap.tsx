@@ -54,7 +54,7 @@ const BACK_SLOTS: Record<string, string> = {
   legLowerR: 'calves',
 };
 
-const NO_DATA_COLOR = '#2a2e32';
+const NO_DATA_COLOR = '#333335';
 
 function colorFor(ratio: number) {
   const hue = 230 - ratio * 205;
@@ -94,7 +94,7 @@ export default function StrengthMap() {
               style={{
                 border: 'none',
                 background: view === v ? 'var(--accent)' : 'transparent',
-                color: view === v ? 'var(--accent-text)' : '#a9adb1',
+                color: view === v ? 'var(--accent-text)' : '#a8a8aa',
                 padding: '7px 16px',
                 borderRadius: 6,
                 font: "600 12px/1 'Inter Tight', sans-serif",
@@ -113,8 +113,8 @@ export default function StrengthMap() {
         <section style={{ display: 'grid', gridTemplateColumns: '1fr 1.3fr', gap: 16 }}>
           <div className="card" style={{ alignItems: 'center', padding: 28 }}>
             <svg viewBox="0 0 240 420" width={230} height={400}>
-              <circle cx={120} cy={38} r={24} fill="#2a2e32" />
-              <rect x={108} y={60} width={24} height={14} rx={4} fill="#2a2e32" />
+              <circle cx={120} cy={38} r={24} fill="#333335" />
+              <rect x={108} y={60} width={24} height={14} rx={4} fill="#333335" />
               {LAYOUT.map((z) => {
                 const key = slots[z.slot];
                 const ratio = ratioByKey[key];
@@ -158,7 +158,7 @@ export default function StrengthMap() {
                     <span style={{ width: 110, flex: 'none', font: "400 13px/1 'Inter', sans-serif", color: 'var(--text-body)' }}>
                       {m.label}
                     </span>
-                    <div style={{ flex: 1, height: 8, borderRadius: 4, background: '#20242a', overflow: 'hidden' }}>
+                    <div style={{ flex: 1, height: 8, borderRadius: 4, background: '#202022', overflow: 'hidden' }}>
                       <div style={{ height: '100%', borderRadius: 4, background: colorFor(m.ratio), width: m.pct }} />
                     </div>
                     <span style={{ width: 36, textAlign: 'right', font: "600 12px/1 'Inter Tight', sans-serif", color: 'var(--text)' }}>

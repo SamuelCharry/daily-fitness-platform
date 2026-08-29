@@ -11,6 +11,7 @@ import RoutineDetail from './pages/RoutineDetail';
 import Exercises from './pages/Exercises';
 import DailyLog from './pages/DailyLog';
 import Session from './pages/Session';
+import Glossary from './pages/Glossary';
 
 function RequireAuth({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth();
@@ -63,6 +64,7 @@ export default function App() {
             <Route path="/routines/:id" element={<RoutineDetail />} />
             <Route path="/exercises" element={<Exercises />} />
             <Route path="/daily-log" element={<DailyLog />} />
+            <Route path="/glossary" element={<Glossary />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

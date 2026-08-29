@@ -37,7 +37,7 @@ function ExercisePicker({ onPick }: { onPick: (ex: Exercise) => void }) {
                 setSearch('');
               }}
               style={{ padding: '8px 12px', cursor: 'pointer', fontSize: 13, color: 'var(--text)' }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = '#23262a')}
+              onMouseEnter={(e) => (e.currentTarget.style.background = '#262627')}
               onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
             >
               {ex.name} <span style={{ color: 'var(--text-dim)' }}>· {ex.muscle.replace('_', ' ')}</span>
@@ -110,7 +110,7 @@ function WorkoutCard({ workout, onChanged }: { workout: Workout; onChanged: () =
           <div
             key={ex.exercise_id}
             style={{
-              background: '#14161a',
+              background: '#101011',
               border: '1px solid var(--border)',
               borderRadius: 10,
               padding: '12px 16px',
