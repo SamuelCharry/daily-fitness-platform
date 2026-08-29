@@ -15,6 +15,10 @@ class WorkoutExerciseBody(BaseModel):
     exercise_id: int
     order_index: int = 0
     target_sets: Optional[int] = None
+    rep_range_min: Optional[int] = None
+    rep_range_max: Optional[int] = None
+    rir_target: Optional[int] = None
+    rest_seconds: Optional[int] = None
     comments: Optional[str] = None
 
 
@@ -38,6 +42,10 @@ def _serialize_workout(workout: Workout):
                 "id": we.id,
                 "order_index": we.order_index,
                 "target_sets": we.target_sets,
+                "rep_range_min": we.rep_range_min,
+                "rep_range_max": we.rep_range_max,
+                "rir_target": we.rir_target,
+                "rest_seconds": we.rest_seconds,
                 "comments": we.comments,
                 "exercise_id": we.exercise.id,
                 "name": we.exercise.name,
@@ -98,6 +106,20 @@ def create_routine(
     is_first = db.query(Routine).filter(Routine.user_id == current_user.id).count() == 0
     routine = Routine(user_id=current_user.id, name=body.name, is_active=is_first)
     db.add(routine)
+    db.commit()
+    db.refresh(routine)
+    return _serialize_routine(routine)
+
+
+@router.put("/routines/{routine_id}")
+def rename_routine(
+    routine_id: int,
+    body: RoutineBody,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    routine = _get_owned_routine(routine_id, current_user, db)
+    routine.name = body.name
     db.commit()
     db.refresh(routine)
     return _serialize_routine(routine)
@@ -208,6 +230,10 @@ def _sync_workout_exercises(workout: Workout, exercises: List[WorkoutExerciseBod
         if existing is not None:
             existing.order_index = e.order_index
             existing.target_sets = e.target_sets
+            existing.rep_range_min = e.rep_range_min
+            existing.rep_range_max = e.rep_range_max
+            existing.rir_target = e.rir_target
+            existing.rest_seconds = e.rest_seconds
             existing.comments = e.comments
         else:
             db.add(
@@ -216,6 +242,10 @@ def _sync_workout_exercises(workout: Workout, exercises: List[WorkoutExerciseBod
                     exercise_id=e.exercise_id,
                     order_index=e.order_index,
                     target_sets=e.target_sets,
+                    rep_range_min=e.rep_range_min,
+                    rep_range_max=e.rep_range_max,
+                    rir_target=e.rir_target,
+                    rest_seconds=e.rest_seconds,
                     comments=e.comments,
                 )
             )

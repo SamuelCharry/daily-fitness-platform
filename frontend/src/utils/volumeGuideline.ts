@@ -1,37 +1,35 @@
-// Weekly-sets guideline by frequency, from the Muscle Building Manual's programming notes.
+// Weekly volume check, compared against the per-muscle targets in
+// muscleVolumeTargets.ts (pulled from the user's own program) rather than a
+// generic textbook formula. A muscle flagged `isFloor` in that table is a
+// minimum to clear, not a ceiling to avoid — so it never gets flagged "high".
 import type { Routine } from '../types';
+import { targetFor } from '../data/muscleVolumeTargets';
 
 export interface VolumeStatus {
   frequency: number;
   weeklySets: number;
-  minRecommended: number;
-  maxRecommended: number | null;
+  target: number | null;
+  isFloor: boolean;
   status: 'missing' | 'low' | 'ok' | 'high';
 }
 
-export function evaluateVolume(frequency: number, weeklySets: number): VolumeStatus {
+export function evaluateVolume(frequency: number, weeklySets: number, muscle: string): VolumeStatus {
+  const t = targetFor(muscle);
+  const target = t ? t.weeklySets : null;
+  const isFloor = t?.isFloor ?? false;
+
   if (frequency === 0) {
-    return { frequency, weeklySets, minRecommended: 6, maxRecommended: null, status: 'missing' };
+    return { frequency, weeklySets, target, isFloor, status: 'missing' };
+  }
+  if (target == null) {
+    return { frequency, weeklySets, target, isFloor, status: 'ok' };
   }
 
-  let minRecommended: number;
-  let maxRecommended: number | null;
+  const lowBound = target * 0.75;
+  const highBound = isFloor ? Infinity : target * 1.35;
 
-  if (frequency >= 3) {
-    minRecommended = frequency * 1;
-    maxRecommended = frequency * 3;
-  } else if (frequency === 2) {
-    minRecommended = 4;
-    maxRecommended = 12;
-  } else {
-    minRecommended = 6;
-    maxRecommended = null;
-  }
-
-  const status: VolumeStatus['status'] =
-    weeklySets < minRecommended ? 'low' : maxRecommended != null && weeklySets > maxRecommended ? 'high' : 'ok';
-
-  return { frequency, weeklySets, minRecommended, maxRecommended, status };
+  const status: VolumeStatus['status'] = weeklySets < lowBound ? 'low' : weeklySets > highBound ? 'high' : 'ok';
+  return { frequency, weeklySets, target, isFloor, status };
 }
 
 export interface MuscleVolumeRow extends VolumeStatus {
@@ -55,6 +53,6 @@ export function computeMuscleVolumeRows(routine: Routine, allMuscles: string[]):
   const musclesToShow = new Set([...allMuscles, ...byMuscle.keys()]);
   return [...musclesToShow].sort().map((muscle) => {
     const data = byMuscle.get(muscle) || { sets: 0, workoutIds: new Set<number>() };
-    return { muscle, ...evaluateVolume(data.workoutIds.size, data.sets) };
+    return { muscle, ...evaluateVolume(data.workoutIds.size, data.sets, muscle) };
   });
 }

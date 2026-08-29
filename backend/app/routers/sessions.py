@@ -73,6 +73,39 @@ def list_sessions(
     return [_serialize_session(s) for s in sessions]
 
 
+@router.get("/last-sets/{workout_id}")
+def last_sets(
+    workout_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
+):
+    """The most recent finished session's sets for this workout, keyed by
+    workout_exercise_id - lets the logging screen show 'last: 60kg x 8' next to
+    each set slot so the user can see whether they're progressing."""
+    workout = (
+        db.query(Workout)
+        .join(Routine)
+        .filter(Workout.id == workout_id, Routine.user_id == current_user.id)
+        .first()
+    )
+    if workout is None:
+        raise HTTPException(status_code=404, detail="Workout not found")
+
+    last_session = (
+        db.query(WorkoutSession)
+        .filter(WorkoutSession.workout_id == workout_id, WorkoutSession.finished_at.isnot(None))
+        .order_by(WorkoutSession.date.desc(), WorkoutSession.id.desc())
+        .first()
+    )
+    if last_session is None:
+        return {}
+
+    by_exercise: dict[int, list[dict]] = {}
+    for s in sorted(last_session.sets, key=lambda s: s.set_number):
+        by_exercise.setdefault(s.workout_exercise_id, []).append(
+            {"set_number": s.set_number, "weight": s.weight, "reps": s.reps, "rir": s.rir}
+        )
+    return by_exercise
+
+
 @router.post("")
 def start_session(
     body: StartSessionBody, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)

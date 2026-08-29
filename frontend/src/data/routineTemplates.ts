@@ -41,9 +41,9 @@ export const ROUTINE_TEMPLATES: RoutineTemplate[] = [
     rationale:
       'Every session trains everything, landing each muscle around 3x/week — the highest frequency of the three. Current evidence favors higher frequency for the same weekly volume, which is why this is the recommended default if 3 sessions/week works for your schedule.',
     days: [
-      { name: 'Full Body A', muscles: ALL_MUSCLES },
-      { name: 'Full Body B', muscles: ALL_MUSCLES },
-      { name: 'Full Body C', muscles: ALL_MUSCLES },
+      { name: 'Full Body 1', muscles: ALL_MUSCLES },
+      { name: 'Full Body 2', muscles: ALL_MUSCLES },
+      { name: 'Full Body 3', muscles: ALL_MUSCLES },
     ],
   },
   {
@@ -55,10 +55,10 @@ export const ROUTINE_TEMPLATES: RoutineTemplate[] = [
     rationale:
       'Two upper + two lower sessions land each muscle at 2x/week — the frequency most current research treats as a sweet spot — while giving more room per session for isolation work than Full Body does.',
     days: [
-      { name: 'Upper A', muscles: UPPER_MUSCLES },
-      { name: 'Lower A', muscles: LOWER_MUSCLES },
-      { name: 'Upper B', muscles: UPPER_MUSCLES },
-      { name: 'Lower B', muscles: LOWER_MUSCLES },
+      { name: 'Upper 1', muscles: UPPER_MUSCLES },
+      { name: 'Lower 1', muscles: LOWER_MUSCLES },
+      { name: 'Upper 2', muscles: UPPER_MUSCLES },
+      { name: 'Lower 2', muscles: LOWER_MUSCLES },
     ],
   },
   {
@@ -110,3 +110,23 @@ export function loadPlanFor(templateKey: RoutineTemplate['key'], minutes: Sessio
 export function isBigMuscle(muscle: string): boolean {
   return BIG_MUSCLES.has(muscle);
 }
+
+export { UPPER_MUSCLES, LOWER_MUSCLES, ALL_MUSCLES, PUSH_MUSCLES, PULL_MUSCLES, LEGS_MUSCLES };
+
+// Day types offered when building a workout day by hand, so picking "Upper" or
+// "Lower" pre-selects the right muscle list instead of typing a free-text name.
+export interface DayType {
+  key: string;
+  label: string;
+  muscles: string[];
+}
+
+export const DAY_TYPES: DayType[] = [
+  { key: 'upper', label: 'Upper', muscles: UPPER_MUSCLES },
+  { key: 'lower', label: 'Lower', muscles: LOWER_MUSCLES },
+  { key: 'push', label: 'Push', muscles: PUSH_MUSCLES },
+  { key: 'pull', label: 'Pull', muscles: PULL_MUSCLES },
+  { key: 'legs', label: 'Legs', muscles: LEGS_MUSCLES },
+  { key: 'full_body', label: 'Full Body', muscles: ALL_MUSCLES },
+  { key: 'custom', label: 'Custom', muscles: [] },
+];

@@ -97,6 +97,10 @@ export interface WorkoutExerciseEntry {
   id: number;
   order_index: number;
   target_sets: number | null;
+  rep_range_min: number | null;
+  rep_range_max: number | null;
+  rir_target: number | null;
+  rest_seconds: number | null;
   comments: string | null;
   exercise_id: number;
   name: string;
@@ -105,6 +109,15 @@ export interface WorkoutExerciseEntry {
   joint_action: string | null;
   plane: string | null;
 }
+
+export interface LastSet {
+  set_number: number;
+  weight: number | null;
+  reps: number | null;
+  rir: number | null;
+}
+
+export type LastSetsByExercise = Record<number, LastSet[]>;
 
 export interface Workout {
   id: number;

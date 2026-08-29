@@ -104,6 +104,10 @@ class WorkoutExercise(Base):
     exercise_id = Column(Integer, ForeignKey("exercises.id"), nullable=False)
     order_index = Column(Integer, default=0)
     target_sets = Column(Integer)
+    rep_range_min = Column(Integer)
+    rep_range_max = Column(Integer)
+    rir_target = Column(Integer)
+    rest_seconds = Column(Integer)
     comments = Column(String)
 
     workout = relationship("Workout", back_populates="exercises")

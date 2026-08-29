@@ -1,10 +1,11 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from .database import Base, engine
+from .database import Base, engine, run_migrations
 from .routers import auth, body_stats, dashboard, exercises, profile, routines, sessions
 
 Base.metadata.create_all(bind=engine)
+run_migrations()
 
 app = FastAPI(title="Daily Fitness Platform")
 
