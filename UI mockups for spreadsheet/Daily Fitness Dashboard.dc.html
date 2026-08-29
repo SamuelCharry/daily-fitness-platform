@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Inter+Tight:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  body{margin:0;background:#15171a;font-family:'Inter',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+  a{color:#7dd3e8;text-decoration:none}
+  a:hover{color:#9fe1f0}
+  ::selection{background:#2b3a3f}
+  input::placeholder{color:#6b7176}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+</style>
+</helmet>
+
+<sc-if value="{{ isLogin }}" hint-placeholder-val="{{ true }}">
+  <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:radial-gradient(120% 120% at 50% -10%, #1b2024 0%, #14161a 60%, #101214 100%);font-family:'Inter',sans-serif">
+    <div style="width:400px;display:flex;flex-direction:column;gap:40px;animation:fadeIn .5s ease">
+      <div style="display:flex;align-items:center;gap:8px">
+        <div style="width:8px;height:8px;border-radius:2px;background:#7dd3e8"></div>
+        <span style="font:600 13px/1 'Inter Tight',sans-serif;letter-spacing:.06em;color:#e9eaea;text-transform:uppercase">Daily Fitness</span>
+      </div>
+      <h1 style="margin:0;font:500 32px/1.25 'Inter Tight',sans-serif;color:#f2f2f2;letter-spacing:-0.01em">Your data.<br>Your training.<br>Your preparation.</h1>
+      <div style="display:flex;flex-direction:column;gap:18px">
+        <label style="display:flex;flex-direction:column;gap:8px">
+          <span style="font:500 11px/1 'Inter',sans-serif;letter-spacing:.05em;color:#8a8f94;text-transform:uppercase">Email</span>
+          <input type="email" placeholder="you@domain.com" style="background:#1c1f22;border:1px solid #2a2e32;border-radius:8px;padding:12px 14px;font:400 14px/1 'Inter',sans-serif;color:#e9eaea;outline:none">
+        </label>
+        <label style="display:flex;flex-direction:column;gap:8px">
+          <span style="font:500 11px/1 'Inter',sans-serif;letter-spacing:.05em;color:#8a8f94;text-transform:uppercase">Password</span>
+          <input type="password" placeholder="••••••••" style="background:#1c1f22;border:1px solid #2a2e32;border-radius:8px;padding:12px 14px;font:400 14px/1 'Inter',sans-serif;color:#e9eaea;outline:none">
+        </label>
+        <button onclick="{{ logIn }}" style="margin-top:6px;background:#7dd3e8;border:none;border-radius:8px;padding:13px 16px;font:600 13px/1 'Inter Tight',sans-serif;letter-spacing:.02em;color:#0f1113;cursor:pointer" style-hover="background:#8fdaeb">Log in</button>
+        <a href="#" style="align-self:center;font:400 12px/1 'Inter',sans-serif;color:#6b7176;margin-top:4px">Forgot password?</a>
+      </div>
+    </div>
+  </div>
+</sc-if>
+
+<sc-if value="{{ isApp }}" hint-placeholder-val="{{ false }}">
+<div style="min-height:100vh;display:grid;grid-template-columns:240px 1fr;background:#15171a;font-family:'Inter',sans-serif;color:#e9eaea">
+
+  <aside style="border-right:1px solid #23262a;padding:24px 16px;display:flex;flex-direction:column;gap:26px;overflow-y:auto">
+    <div style="display:flex;align-items:center;gap:8px;padding:0 8px">
+      <div style="width:8px;height:8px;border-radius:2px;background:#7dd3e8"></div>
+      <span style="font:600 12px/1 'Inter Tight',sans-serif;letter-spacing:.06em;color:#e9eaea;text-transform:uppercase">Daily Fitness</span>
+    </div>
+
+    <sc-for list="{{ navGroups }}" as="group" hint-placeholder-count="4">
+      <div style="display:flex;flex-direction:column;gap:2px">
+        <sc-if value="{{ group.heading }}" hint-placeholder-val="{{ false }}">
+          <span style="font:600 10px/1 'Inter',sans-serif;letter-spacing:.08em;color:#5f6469;padding:6px 10px 4px;text-transform:uppercase">{{ group.heading }}</span>
+        </sc-if>
+        <sc-for list="{{ group.items }}" as="item" hint-placeholder-count="2">
+          <a href="#" onclick="{{ item.onClick }}" style="display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:6px;font:500 13px/1 'Inter',sans-serif;color:{{ item.color }};background:{{ item.bg }}" style-hover="background:#1e2124">
+            <span style="width:5px;height:5px;border-radius:50%;background:{{ item.dot }};flex:none"></span>
+            {{ item.label }}
+          </a>
+        </sc-for>
+      </div>
+    </sc-for>
+
+    <div style="margin-top:auto;padding:0 8px">
+      <a href="#" onclick="{{ goSettings }}" style="font:400 12px/1 'Inter',sans-serif;color:#6b7176;padding:8px 2px">Settings</a>
+    </div>
+  </aside>
+
+  <main style="padding:32px 44px 56px;display:flex;flex-direction:column;gap:32px;max-width:1320px;overflow-y:auto">
+
+    <sc-if value="{{ isDashboard }}" hint-placeholder-val="{{ true }}">
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <span style="font:600 11px/1 'Inter',sans-serif;letter-spacing:.08em;color:#7dd3e8;text-transform:uppercase">Preparation</span>
+          <h1 style="margin:0;font:500 26px/1.1 'Inter Tight',sans-serif;color:#f5f5f5;letter-spacing:-0.01em">Week 6 · Cutting</h1>
+        </div>
+        <div style="width:34px;height:34px;border-radius:50%;background:#1e2124;border:1px solid #2a2e32"></div>
+      </div>
+
+      <section style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px">
+        <sc-for list="{{ statCards }}" as="s" hint-placeholder-count="3">
+          <div style="background:#191c1f;border:1px solid #23262a;border-radius:10px;padding:20px 22px;display:flex;flex-direction:column;gap:10px">
+            <span style="font:500 11px/1 'Inter',sans-serif;letter-spacing:.06em;color:#8a8f94;text-transform:uppercase">{{ s.label }}</span>
+            <span style="font:500 28px/1 'Inter Tight',sans-serif;color:#f2f2f2">{{ s.value }}</span>
+          </div>
+        </sc-for>
+      </section>
+
+      <section style="display:grid;grid-template-columns:1.65fr 1fr;gap:16px">
+        <div style="background:#191c1f;border:1px solid #23262a;border-radius:10px;padding:22px 24px;display:flex;flex-direction:column;gap:16px">
+          <div style="display:flex;align-items:baseline;justify-content:space-between">
+            <span style="font:500 11px/1 'Inter',sans-serif;letter-spacing:.06em;color:#8a8f94;text-transform:uppercase">Bodyweight</span>
+            <span style="font:400 11px/1 'Inter',sans-serif;color:#5f6469">last 8 weeks</span>
+          </div>
+          {{ bodyweightChart }}
+        </div>
+
+        <div style="background:#191c1f;border:1px solid #23262a;border-radius:10px;padding:22px 24px;display:flex;flex-direction:column;gap:16px">
+          <span style="font:500 11px/1 'Inter',sans-serif;letter-spacing:.06em;color:#8a8f94;text-transform:uppercase">Today's Training</span>
+          <div style="display:flex;flex-direction:column;gap:2px">
+            <span style="font:500 20px/1.2 'Inter Tight',sans-serif;color:#f2f2f2">Upper A</span>
+            <span style="font:400 13px/1.4 'Inter',sans-serif;color:#8a8f94">6 exercises · ~70 min</span>
+          </div>
+          <button style="margin-top:auto;background:#7dd3e8;border:none;border-radius:7px;padding:11px 14px;font:600 12.5px/1 'Inter Tight',sans-serif;letter-spacing:.02em;color:#0f1113;cursor:pointer" style-hover="background:#8fdaeb">Start Workout</button>
+        </div>
+      </section>
+
+      <section style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div style="background:#191c1f;border:1px solid #23262a;border-radius:10px;padding:22px 24px;display:flex;flex-direction:column;gap:16px">
+          <span style="font:500 11px/1 'Inter',sans-serif;letter-spacing:.06em;color:#8a8f94;text-transform:uppercase">Performance</span>
+          <div style="display:flex;flex-direction:column;gap:14px">
+            <sc-for list="{{ performanceRows }}" as="r" hint-placeholder-count="3">
+              <div style="display:flex;align-items:center;justify-content:space-between;padding-bottom:12px;border-bottom:1px solid #23262a">
+                <span style="font:400 13.5px/1 'Inter',sans-serif;color:#c9cace">{{ r.label }}</span>
+                <span style="font:600 14px/1 'Inter Tight',sans-serif;color:#e9eaea">{{ r.trend }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+
+        <div style="background:#191c1f;border:1px solid #23262a;border-radius:10px;padding:22px 24px;display:flex;flex-direction:column;gap:16px">
+          <div style="display:flex;align-items:baseline;justify-content:space-between">
+            <span style="font:500 11px/1 'Inter',sans-serif;letter-spacing:.06em;color:#8a8f94;text-transform:uppercase">Preparation</span>
+            <span style="font:400 11px/1 'Inter',sans-serif;color:#5f6469">body fat estimate</span>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
+            <sc-for list="{{ bfMethods }}" as="b" hint-placeholder-count="3">
+              <div style="display:flex;flex-direction:column;gap:4px">
+                <span style="font:400 10.5px/1 'Inter',sans-serif;color:#6b7176;text-transform:uppercase;letter-spacing:.04em">{{ b.name }}</span>
+                <span style="font:500 18px/1 'Inter Tight',sans-serif;color:#e9eaea">{{ b.value }}</span>
+              </div>
+            </sc-for>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:14px;margin-top:4px">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding-bottom:12px;border-bottom:1px solid #23262a">
+              <span style="font:400 13.5px/1 'Inter',sans-serif;color:#c9cace">Adherence</span>
+              <span style="font:600 14px/1 'Inter Tight',sans-serif;color:#e9eaea">92%</span>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between">
+              <span style="font:400 13.5px/1 'Inter',sans-serif;color:#c9cace">Phase</span>
+              <span style="font:600 14px/1 'Inter Tight',sans-serif;color:#e9eaea">Cutting · wk 6</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <p style="margin:0;font:400 11px/1.5 'Inter',sans-serif;color:#4d5155">Example data shown for layout purposes — not connected to your sheet.</p>
+    </sc-if>
+
+    <sc-if value="{{ isStrengthMap }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <span style="font:600 11px/1 'Inter',sans-serif;letter-spacing:.08em;color:#7dd3e8;text-transform:uppercase">Analysis</span>
+          <h1 style="margin:0;font:500 26px/1.1 'Inter Tight',sans-serif;color:#f5f5f5;letter-spacing:-0.01em">Strength Map</h1>
+        </div>
+        <div style="display:flex;gap:4px;background:#191c1f;border:1px solid #23262a;border-radius:8px;padding:3px">
+          <sc-for list="{{ viewToggle }}" as="v" hint-placeholder-count="2">
+            <button onclick="{{ v.onClick }}" style="border:none;background:{{ v.bg }};color:{{ v.color }};padding:7px 16px;border-radius:6px;font:600 12px/1 'Inter Tight',sans-serif;cursor:pointer">{{ v.label }}</button>
+          </sc-for>
+        </div>
+      </div>
+
+      <section style="display:grid;grid-template-columns:1fr 1.3fr;gap:16px">
+        <div style="background:#191c1f;border:1px solid #23262a;border-radius:10px;padding:28px;display:flex;flex-direction:column;align-items:center;gap:18px">
+          <svg viewBox="0 0 240 420" width="230" height="400">
+            <circle cx="120" cy="38" r="24" fill="#2a2e32"></circle>
+            <rect x="108" y="60" width="24" height="14" rx="4" fill="#2a2e32"></rect>
+            <sc-for list="{{ bodyZones }}" as="z" hint-placeholder-count="13">
+              <rect x="{{ z.x }}" y="{{ z.y }}" width="{{ z.w }}" height="{{ z.h }}" rx="{{ z.rx }}" fill="{{ z.color }}"></rect>
+            </sc-for>
+          </svg>
+          <div style="display:flex;align-items:center;gap:10px;width:100%">
+            <span style="font:400 10px/1 'Inter',sans-serif;color:#6b7176">Weaker</span>
+            <div style="flex:1;height:6px;border-radius:3px;background:linear-gradient(90deg,oklch(0.62 0.15 230),oklch(0.62 0.17 90),oklch(0.62 0.19 25))"></div>
+            <span style="font:400 10px/1 'Inter',sans-serif;color:#6b7176">Stronger</span>
+          </div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:16px">
+          <div style="background:#191c1f;border:1px solid #23262a;border-radius:10px;padding:22px 24px;display:flex;flex-direction:column;gap:14px">
+            <span style="font:500 11px/1 'Inter',sans-serif;letter-spacing:.06em;color:#8a8f94;text-transform:uppercase">Muscle groups · {{ viewLabel }}</span>
+            <sc-for list="{{ muscleRanking }}" as="m" hint-placeholder-count="7">
+              <div style="display:flex;align-items:center;gap:12px">
+                <span style="width:110px;flex:none;font:400 13px/1 'Inter',sans-serif;color:#c9cace">{{ m.label }}</span>
+                <div style="flex:1;height:8px;border-radius:4px;background:#20242a;overflow:hidden">
+                  <div style="height:100%;border-radius:4px;background:{{ m.color }};width:{{ m.pct }}"></div>
+                </div>
+                <span style="width:36px;text-align:right;font:600 12px/1 'Inter Tight',sans-serif;color:#e9eaea">{{ m.pctLabel }}</span>
+              </div>
+            </sc-for>
+          </div>
+          <p style="margin:0;font:400 11px/1.5 'Inter',sans-serif;color:#4d5155">Relative strength per muscle group, derived from working weights vs. bodyweight. Example values.</p>
+        </div>
+      </section>
+    </sc-if>
+
+    <sc-if value="{{ isPreparation }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <span style="font:600 11px/1 'Inter',sans-serif;letter-spacing:.08em;color:#7dd3e8;text-transform:uppercase">Analysis</span>
+          <h1 style="margin:0;font:500 26px/1.1 'Inter Tight',sans-serif;color:#f5f5f5;letter-spacing:-0.01em">Preparation</h1>
+        </div>
+        <div style="display:flex;gap:4px;background:#191c1f;border:1px solid #23262a;border-radius:8px;padding:3px">
+          <sc-for list="{{ phaseToggle }}" as="p" hint-placeholder-count="2">
+            <button onclick="{{ p.onClick }}" style="border:none;background:{{ p.bg }};color:{{ p.color }};padding:7px 16px;border-radius:6px;font:600 12px/1 'Inter Tight',sans-serif;cursor:pointer">{{ p.label }}</button>
+          </sc-for>
+        </div>
+      </div>
+
+      <section style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px">
+        <sc-for list="{{ prepStats }}" as="s" hint-placeholder-count="4">
+          <div style="background:#191c1f;border:1px solid #23262a;border-radius:10px;padding:18px 20px;display:flex;flex-direction:column;gap:8px">
+            <span style="font:500 10.5px/1 'Inter',sans-serif;letter-spacing:.06em;color:#8a8f94;text-transform:uppercase">{{ s.label }}</span>
+            <span style="font:500 22px/1 'Inter Tight',sans-serif;color:#f2f2f2">{{ s.value }}</span>
+          </div>
+        </sc-for>
+      </section>
+
+      <div style="background:#191c1f;border:1px solid #23262a;border-radius:10px;padding:22px 24px;display:flex;flex-direction:column;gap:16px">
+        <div style="display:flex;align-items:baseline;justify-content:space-between">
+          <span style="font:500 11px/1 'Inter',sans-serif;letter-spacing:.06em;color:#8a8f94;text-transform:uppercase">Volume &amp; frequency targets</span>
+          <span style="font:400 11px/1 'Inter',sans-serif;color:#5f6469">sets/week · sessions/week</span>
+        </div>
+        <div style="display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:8px 16px;font:500 10.5px/1 'Inter',sans-serif;color:#5f6469;text-transform:uppercase;letter-spacing:.04em;padding:0 4px 8px;border-bottom:1px solid #23262a">
+          <span>Muscle group</span><span>Sets / week</span><span>Frequency</span>
+        </div>
+        <sc-for list="{{ volumeTargets }}" as="v" hint-placeholder-count="5">
+          <div style="display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:8px 16px;align-items:center;padding:4px">
+            <span style="font:400 13.5px/1 'Inter',sans-serif;color:#c9cace">{{ v.label }}</span>
+            <input type="number" defaultValue="{{ v.sets }}" style="background:#1c1f22;border:1px solid #2a2e32;border-radius:6px;padding:8px 10px;font:400 13px/1 'Inter',sans-serif;color:#e9eaea;outline:none;width:70px">
+            <input type="number" defaultValue="{{ v.freq }}" style="background:#1c1f22;border:1px solid #2a2e32;border-radius:6px;padding:8px 10px;font:400 13px/1 'Inter',sans-serif;color:#e9eaea;outline:none;width:70px">
+          </div>
+        </sc-for>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isRoutines }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <span style="font:600 11px/1 'Inter',sans-serif;letter-spacing:.08em;color:#7dd3e8;text-transform:uppercase">Training</span>
+          <h1 style="margin:0;font:500 26px/1.1 'Inter Tight',sans-serif;color:#f5f5f5;letter-spacing:-0.01em">Routine Builder</h1>
+        </div>
+        <button style="background:#7dd3e8;border:none;border-radius:7px;padding:10px 16px;font:600 12.5px/1 'Inter Tight',sans-serif;color:#0f1113;cursor:pointer">+ Add Exercise</button>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:4px;max-width:400px">
+        <span style="font:500 11px/1 'Inter',sans-serif;letter-spacing:.05em;color:#8a8f94;text-transform:uppercase">Routine name</span>
+        <input type="text" defaultValue="Upper A" style="background:#1c1f22;border:1px solid #2a2e32;border-radius:8px;padding:11px 14px;font:500 16px/1 'Inter Tight',sans-serif;color:#e9eaea;outline:none">
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <sc-for list="{{ routineExercises }}" as="ex" hint-placeholder-count="6">
+          <div style="background:#191c1f;border:1px solid #23262a;border-radius:10px;padding:16px 20px;display:grid;grid-template-columns:28px 1.5fr 1fr auto;gap:16px;align-items:center">
+            <span style="font:600 13px/1 'Inter Tight',sans-serif;color:#5f6469">{{ ex.order }}</span>
+            <div style="display:flex;flex-direction:column;gap:4px">
+              <span style="font:500 14.5px/1.2 'Inter Tight',sans-serif;color:#f2f2f2">{{ ex.name }}</span>
+              <span style="font:400 11.5px/1.4 'Inter',sans-serif;color:#8a8f94">{{ ex.muscle }} · {{ ex.jointAction }} · {{ ex.plane }}</span>
+            </div>
+            <span style="font:400 13px/1 'Inter',sans-serif;color:#c9cace">{{ ex.setsReps }} · RIR {{ ex.rir }}</span>
+            <div style="display:flex;gap:4px;background:#14161a;border:1px solid #23262a;border-radius:7px;padding:3px">
+              <sc-for list="{{ ex.equipOptions }}" as="eq" hint-placeholder-count="3">
+                <span onclick="{{ eq.onClick }}" style="padding:6px 10px;border-radius:5px;font:500 11px/1 'Inter',sans-serif;color:{{ eq.color }};background:{{ eq.bg }};cursor:pointer">{{ eq.label }}</span>
+              </sc-for>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isExercises }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <span style="font:600 11px/1 'Inter',sans-serif;letter-spacing:.08em;color:#7dd3e8;text-transform:uppercase">Training</span>
+        <h1 style="margin:0;font:500 26px/1.1 'Inter Tight',sans-serif;color:#f5f5f5;letter-spacing:-0.01em">Exercise Library</h1>
+      </div>
+
+      <input type="text" placeholder="Search exercises" style="background:#1c1f22;border:1px solid #2a2e32;border-radius:8px;padding:12px 14px;font:400 14px/1 'Inter',sans-serif;color:#e9eaea;outline:none;max-width:420px">
+
+      <div style="display:flex;gap:24px">
+        <sc-for list="{{ exerciseFilters }}" as="f" hint-placeholder-count="3">
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <span style="font:500 10.5px/1 'Inter',sans-serif;letter-spacing:.06em;color:#5f6469;text-transform:uppercase">{{ f.label }}</span>
+            <div style="display:flex;gap:6px;flex-wrap:wrap">
+              <sc-for list="{{ f.options }}" as="opt" hint-placeholder-count="3">
+                <span onclick="{{ opt.onClick }}" style="padding:6px 12px;border-radius:16px;font:500 12px/1 'Inter',sans-serif;color:{{ opt.color }};background:{{ opt.bg }};border:1px solid {{ opt.border }};cursor:pointer">{{ opt.label }}</span>
+              </sc-for>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:2px;border-top:1px solid #23262a">
+        <sc-for list="{{ exerciseList }}" as="ex" hint-placeholder-count="6">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 4px;border-bottom:1px solid #23262a">
+            <div style="display:flex;flex-direction:column;gap:4px">
+              <span style="font:500 14.5px/1.2 'Inter Tight',sans-serif;color:#f2f2f2">{{ ex.name }}</span>
+              <span style="font:400 11.5px/1.4 'Inter',sans-serif;color:#8a8f94">{{ ex.muscle }} · {{ ex.jointAction }} · {{ ex.plane }}</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:14px">
+              <span style="font:400 11px/1 'Inter',sans-serif;color:#5f6469">{{ ex.equip }}</span>
+              <span style="width:26px;height:26px;border-radius:6px;background:#1e2124;border:1px solid #2a2e32;display:flex;align-items:center;justify-content:center;font:600 15px/1 'Inter',sans-serif;color:#7dd3e8;cursor:pointer">+</span>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isDailyLog }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <span style="font:600 11px/1 'Inter',sans-serif;letter-spacing:.08em;color:#7dd3e8;text-transform:uppercase">Tracking</span>
+        <h1 style="margin:0;font:500 26px/1.1 'Inter Tight',sans-serif;color:#f5f5f5;letter-spacing:-0.01em">Daily Log — August 28</h1>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;max-width:900px">
+        <div style="display:flex;flex-direction:column;gap:18px">
+          <sc-for list="{{ logFieldsLeft }}" as="fl" hint-placeholder-count="5">
+            <label style="display:flex;flex-direction:column;gap:8px">
+              <span style="font:500 11px/1 'Inter',sans-serif;letter-spacing:.05em;color:#8a8f94;text-transform:uppercase">{{ fl.label }}</span>
+              <input type="text" defaultValue="{{ fl.value }}" style="background:#1c1f22;border:1px solid #2a2e32;border-radius:8px;padding:11px 14px;font:400 14px/1 'Inter',sans-serif;color:#e9eaea;outline:none">
+            </label>
+          </sc-for>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:18px">
+          <sc-for list="{{ logFieldsRight }}" as="fr" hint-placeholder-count="4">
+            <label style="display:flex;flex-direction:column;gap:8px">
+              <span style="font:500 11px/1 'Inter',sans-serif;letter-spacing:.05em;color:#8a8f94;text-transform:uppercase">{{ fr.label }}</span>
+              <input type="text" defaultValue="{{ fr.value }}" style="background:#1c1f22;border:1px solid #2a2e32;border-radius:8px;padding:11px 14px;font:400 14px/1 'Inter',sans-serif;color:#e9eaea;outline:none">
+            </label>
+          </sc-for>
+          <label style="display:flex;flex-direction:column;gap:8px">
+            <span style="font:500 11px/1 'Inter',sans-serif;letter-spacing:.05em;color:#8a8f94;text-transform:uppercase">Notes</span>
+            <textarea rows="3" style="background:#1c1f22;border:1px solid #2a2e32;border-radius:8px;padding:11px 14px;font:400 14px/1.4 'Inter',sans-serif;color:#e9eaea;outline:none;resize:none"></textarea>
+          </label>
+        </div>
+      </div>
+      <button style="align-self:flex-start;background:#7dd3e8;border:none;border-radius:8px;padding:12px 22px;font:600 13px/1 'Inter Tight',sans-serif;color:#0f1113;cursor:pointer">Save</button>
+    </sc-if>
+
+    <sc-if value="{{ isComingSoon }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex;flex-direction:column;align-items:flex-start;gap:10px;padding:60px 0">
+        <span style="font:600 11px/1 'Inter',sans-serif;letter-spacing:.08em;color:#5f6469;text-transform:uppercase">{{ comingSoonLabel }}</span>
+        <h1 style="margin:0;font:500 22px/1.2 'Inter Tight',sans-serif;color:#8a8f94">Not built in this pass yet.</h1>
+      </div>
+    </sc-if>
+
+  </main>
+</div>
+</sc-if>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+function color(intensity) {
+  const hue = 230 - intensity * 205; // 230 blue (weak) -> 25 red (strong)
+  const c = 0.14 + intensity * 0.06;
+  return `oklch(0.63 ${c.toFixed(2)} ${hue.toFixed(0)})`;
+}
+
+const LAYOUT = [
+  { slot: 'shoulderL', x: 46, y: 78, w: 34, h: 30, rx: 10 },
+  { slot: 'shoulderR', x: 160, y: 78, w: 34, h: 30, rx: 10 },
+  { slot: 'torsoFront', x: 84, y: 80, w: 72, h: 46, rx: 12 },
+  { slot: 'upperArmL', x: 44, y: 112, w: 26, h: 54, rx: 10 },
+  { slot: 'upperArmR', x: 170, y: 112, w: 26, h: 54, rx: 10 },
+  { slot: 'torsoLower', x: 90, y: 130, w: 60, h: 56, rx: 10 },
+  { slot: 'forearmL', x: 42, y: 170, w: 24, h: 56, rx: 9 },
+  { slot: 'forearmR', x: 174, y: 170, w: 24, h: 56, rx: 9 },
+  { slot: 'hips', x: 84, y: 190, w: 72, h: 38, rx: 12 },
+  { slot: 'legUpperL', x: 86, y: 232, w: 32, h: 92, rx: 12 },
+  { slot: 'legUpperR', x: 122, y: 232, w: 32, h: 92, rx: 12 },
+  { slot: 'legLowerL', x: 90, y: 328, w: 24, h: 78, rx: 9 },
+  { slot: 'legLowerR', x: 126, y: 328, w: 24, h: 78, rx: 9 }
+];
+
+const FRONT = {
+  shoulderL: { label: 'Shoulders', i: 0.55 }, shoulderR: { label: 'Shoulders', i: 0.55 },
+  torsoFront: { label: 'Chest', i: 0.95 },
+  upperArmL: { label: 'Biceps', i: 0.5 }, upperArmR: { label: 'Biceps', i: 0.5 },
+  torsoLower: { label: 'Abs', i: 0.45 },
+  forearmL: { label: 'Forearms', i: 0.4 }, forearmR: { label: 'Forearms', i: 0.4 },
+  hips: { label: 'Hips', i: 0.5 },
+  legUpperL: { label: 'Quads', i: 0.65 }, legUpperR: { label: 'Quads', i: 0.65 },
+  legLowerL: { label: 'Calves', i: 0.35 }, legLowerR: { label: 'Calves', i: 0.35 }
+};
+
+const BACK = {
+  shoulderL: { label: 'Rear delts', i: 0.5 }, shoulderR: { label: 'Rear delts', i: 0.5 },
+  torsoFront: { label: 'Upper back', i: 0.5 },
+  upperArmL: { label: 'Triceps', i: 0.4 }, upperArmR: { label: 'Triceps', i: 0.4 },
+  torsoLower: { label: 'Lower back', i: 0.45 },
+  forearmL: { label: 'Forearms', i: 0.4 }, forearmR: { label: 'Forearms', i: 0.4 },
+  hips: { label: 'Glutes', i: 0.5 },
+  legUpperL: { label: 'Hamstrings', i: 0.3 }, legUpperR: { label: 'Hamstrings', i: 0.3 },
+  legLowerL: { label: 'Calves', i: 0.35 }, legLowerR: { label: 'Calves', i: 0.35 }
+};
+
+class Component extends DCLogic {
+  state = {
+    screen: 'login',
+    bodyView: 'front',
+    phase: 'cut',
+    equipChoice: {}
+  };
+
+  renderVals() {
+    const nav = (key, label) => ({
+      key, label,
+      color: this.state.screen === key ? '#f2f2f2' : '#a9adb1',
+      bg: this.state.screen === key ? '#1e2124' : 'transparent',
+      dot: this.state.screen === key ? '#7dd3e8' : '#3a3e42',
+      onClick: () => this.setState({ screen: key })
+    });
+
+    const navGroups = [
+      { heading: '', items: [nav('dashboard', 'Dashboard')] },
+      { heading: 'TRAINING', items: [nav('routines', 'Routines'), nav('exercises', 'Exercises')] },
+      { heading: 'TRACKING', items: [nav('dailyLog', 'Daily Log'), nav('history', 'History')] },
+      { heading: 'ANALYSIS', items: [nav('progress', 'Progress'), nav('preparation', 'Preparation'), nav('strengthMap', 'Strength Map')] }
+    ];
+
+    const points = [78.8, 78.6, 78.4, 78.5, 78.2, 78.0, 77.9, 77.9];
+    const w = 560, h = 140, pad = 8;
+    const min = Math.min(...points), max = Math.max(...points);
+    const range = (max - min) || 1;
+    const coords = points.map((p, i) => {
+      const x = pad + (i / (points.length - 1)) * (w - pad * 2);
+      const y = pad + (1 - (p - min) / range) * (h - pad * 2);
+      return [x, y];
+    });
+    const path = coords.map((c, i) => (i === 0 ? 'M' : 'L') + c[0].toFixed(1) + ',' + c[1].toFixed(1)).join(' ');
+    const bodyweightChart = React.createElement('svg', { width: '100%', height: h, viewBox: `0 0 ${w} ${h}`, preserveAspectRatio: 'none' },
+      React.createElement('path', { d: path, fill: 'none', stroke: '#7dd3e8', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round' }),
+      ...coords.map((c, i) => React.createElement('circle', { key: i, cx: c[0], cy: c[1], r: 2.5, fill: '#7dd3e8' }))
+    );
+
+    const muscleMap = this.state.bodyView === 'front' ? FRONT : BACK;
+    const bodyZones = LAYOUT.map(l => ({ ...l, color: color(muscleMap[l.slot].i) }));
+
+    const rankedKeys = ['torsoFront', 'legUpperL', 'shoulderL', 'hips', 'torsoLower', 'upperArmL', 'legLowerL', 'forearmL'];
+    const seen = new Set();
+    const muscleRanking = rankedKeys
+      .filter(k => { if (seen.has(muscleMap[k].label)) return false; seen.add(muscleMap[k].label); return true; })
+      .map(k => ({ label: muscleMap[k].label, pct: (muscleMap[k].i * 100) + '%', pctLabel: Math.round(muscleMap[k].i * 100) + '%', color: color(muscleMap[k].i) }))
+      .sort((a, b) => parseFloat(b.pct) - parseFloat(a.pct));
+
+    const viewToggle = ['front', 'back'].map(v => ({
+      label: v === 'front' ? 'Front' : 'Back',
+      bg: this.state.bodyView === v ? '#7dd3e8' : 'transparent',
+      color: this.state.bodyView === v ? '#0f1113' : '#a9adb1',
+      onClick: () => this.setState({ bodyView: v })
+    }));
+
+    const phaseToggle = ['cut', 'maintain'].map(p => ({
+      label: p === 'cut' ? 'Cutting' : 'Maintaining',
+      bg: this.state.phase === p ? '#7dd3e8' : 'transparent',
+      color: this.state.phase === p ? '#0f1113' : '#a9adb1',
+      onClick: () => this.setState({ phase: p })
+    }));
+
+    const routineExercises = [
+      { name: 'Bench Press', muscle: 'Chest', jointAction: 'Horizontal Push', plane: 'Sagittal', setsReps: '3 × 6–8' },
+      { name: 'Lat Pulldown', muscle: 'Lats', jointAction: 'Vertical Pull', plane: 'Sagittal', setsReps: '3 × 8–10' },
+      { name: 'Machine Shoulder Press', muscle: 'Delts', jointAction: 'Vertical Push', plane: 'Sagittal', setsReps: '2 × 8–10' },
+      { name: 'Lateral Raise', muscle: 'Delts', jointAction: 'Shoulder Abduction', plane: 'Frontal', setsReps: '3 × 12–15' },
+      { name: 'Cable Fly', muscle: 'Chest', jointAction: 'Horizontal Adduction', plane: 'Transverse', setsReps: '2 × 10–12' },
+      { name: 'Triceps Pressdown', muscle: 'Triceps', jointAction: 'Elbow Extension', plane: 'Sagittal', setsReps: '2 × 10–12' }
+    ].map((ex, i) => {
+      const chosen = this.state.equipChoice[i] || 'Machine';
+      return {
+        ...ex, order: String(i + 1).padStart(2, '0'), rir: '1–2',
+        equipOptions: ['Machine', 'Dumbbell', 'Cable'].map(opt => ({
+          label: opt,
+          bg: chosen === opt ? '#7dd3e8' : 'transparent',
+          color: chosen === opt ? '#0f1113' : '#8a8f94',
+          onClick: () => this.setState({ equipChoice: { ...this.state.equipChoice, [i]: opt } })
+        }))
+      };
+    });
+
+    const exerciseFilters = [
+      { label: 'Muscle', options: [{ label: 'Chest' }, { label: 'Back' }, { label: 'Legs' }, { label: 'Shoulders' }] },
+      { label: 'Joint Action', options: [{ label: 'Horizontal Push' }, { label: 'Vertical Pull' }, { label: 'Abduction' }] },
+      { label: 'Plane', options: [{ label: 'Sagittal' }, { label: 'Frontal' }, { label: 'Transverse' }] }
+    ].map(f => ({ ...f, options: f.options.map(o => ({ ...o, color: '#a9adb1', bg: 'transparent', border: '#2a2e32', onClick: () => {} })) }));
+
+    const exerciseList = [
+      { name: 'Bench Press', muscle: 'Chest', jointAction: 'Horizontal Push', plane: 'Sagittal', equip: 'Barbell' },
+      { name: 'Machine Chest Press', muscle: 'Chest', jointAction: 'Horizontal Push', plane: 'Sagittal', equip: 'Machine' },
+      { name: 'Incline DB Press', muscle: 'Chest', jointAction: 'Horizontal Push', plane: 'Sagittal', equip: 'Dumbbell' },
+      { name: 'Cable Fly', muscle: 'Chest', jointAction: 'Horizontal Adduction', plane: 'Transverse', equip: 'Cable' },
+      { name: 'Lateral Raise', muscle: 'Delts', jointAction: 'Shoulder Abduction', plane: 'Frontal', equip: 'Dumbbell' },
+      { name: 'Cable External Rotation', muscle: 'Rotator Cuff', jointAction: 'External Rotation', plane: 'Transverse', equip: 'Cable' }
+    ];
+
+    return {
+      isLogin: this.state.screen === 'login',
+      isApp: this.state.screen !== 'login',
+      logIn: () => this.setState({ screen: 'dashboard' }),
+      goSettings: () => this.setState({ screen: 'settings' }),
+      navGroups,
+      isDashboard: this.state.screen === 'dashboard',
+      isStrengthMap: this.state.screen === 'strengthMap',
+      isPreparation: this.state.screen === 'preparation',
+      isRoutines: this.state.screen === 'routines',
+      isExercises: this.state.screen === 'exercises',
+      isDailyLog: this.state.screen === 'dailyLog',
+      isComingSoon: ['history', 'progress', 'settings'].includes(this.state.screen),
+      comingSoonLabel: this.state.screen,
+      statCards: [
+        { label: 'Weight', value: '78.2 kg' },
+        { label: 'Sleep', value: '7h 42m' },
+        { label: 'Steps', value: '8.4k' }
+      ],
+      bodyweightChart,
+      performanceRows: [
+        { label: 'Strength', trend: '↑' },
+        { label: 'Volume', trend: '↑' },
+        { label: 'Consistency', trend: '→' }
+      ],
+      bfMethods: [
+        { name: 'Deurenberg', value: '14.4%' },
+        { name: 'Navy', value: '13.6%' },
+        { name: 'InBody', value: '15.1%' }
+      ],
+      viewToggle,
+      viewLabel: this.state.bodyView === 'front' ? 'Front' : 'Back',
+      bodyZones,
+      muscleRanking,
+      phaseToggle,
+      prepStats: [
+        { label: 'Bodyweight', value: '78.2 kg' },
+        { label: 'Calories', value: '2,100 avg' },
+        { label: 'Protein', value: '160 g avg' },
+        { label: 'Training adherence', value: '92%' }
+      ],
+      volumeTargets: [
+        { label: 'Chest', sets: 12, freq: 2 },
+        { label: 'Back', sets: 14, freq: 2 },
+        { label: 'Legs', sets: 16, freq: 2 },
+        { label: 'Shoulders', sets: 10, freq: 2 },
+        { label: 'Arms', sets: 8, freq: 2 }
+      ],
+      routineExercises,
+      exerciseFilters,
+      exerciseList,
+      logFieldsLeft: [
+        { label: 'Weight', value: '78.2' },
+        { label: 'Calories', value: '2100' },
+        { label: 'Protein', value: '160' },
+        { label: 'Carbs', value: '220' },
+        { label: 'Fat', value: '55' }
+      ],
+      logFieldsRight: [
+        { label: 'Sleep', value: '7h 42m' },
+        { label: 'Steps', value: '8421' },
+        { label: 'Cardio', value: '30 min' }
+      ]
+    };
+  }
+}
+
+</script>
+</body>
+</html>
