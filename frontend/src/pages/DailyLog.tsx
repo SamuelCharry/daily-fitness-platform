@@ -10,6 +10,7 @@ type FormState = {
   waist: string;
   neck: string;
   hip: string;
+  body_fat_manual: string;
   calories: string;
   protein_g: string;
   carbs_g: string;
@@ -25,6 +26,7 @@ const EMPTY: FormState = {
   waist: '',
   neck: '',
   hip: '',
+  body_fat_manual: '',
   calories: '',
   protein_g: '',
   carbs_g: '',
@@ -69,6 +71,11 @@ export default function DailyLog() {
     );
   }
 
+  const calculatedCalories =
+    form.protein_g || form.carbs_g || form.fat_g
+      ? Math.round((Number(form.protein_g) || 0) * 4 + (Number(form.carbs_g) || 0) * 4 + (Number(form.fat_g) || 0) * 9)
+      : null;
+
   async function save() {
     setSaving(true);
     setSaved(false);
@@ -80,6 +87,7 @@ export default function DailyLog() {
         waist: num(form.waist),
         neck: num(form.neck),
         hip: num(form.hip),
+        body_fat_manual: num(form.body_fat_manual),
         calories: num(form.calories),
         protein_g: num(form.protein_g),
         carbs_g: num(form.carbs_g),
@@ -114,26 +122,50 @@ export default function DailyLog() {
           {field('waist', 'Waist (cm)', 'number')}
           {field('neck', 'Neck (cm)', 'number')}
           {field('hip', 'Hip (cm)', 'number')}
-          {field('calories', 'Calories', 'number')}
+          {field('body_fat_manual', 'Body fat % (InBody / manual scan)', 'number')}
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+          <label className="field">
+            <span className="label">Calories</span>
+            <input
+              type="number"
+              value={form.calories}
+              onChange={(e) => setForm({ ...form, calories: e.target.value })}
+            />
+            {calculatedCalories != null && (
+              <span style={{ font: "400 11.5px/1.4 'Inter', sans-serif", color: 'var(--text-dim)' }}>
+                ≈ {calculatedCalories} kcal from the macros below.{' '}
+                <a
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setForm((f) => ({ ...f, calories: String(calculatedCalories) }));
+                  }}
+                >
+                  Use this
+                </a>
+              </span>
+            )}
+          </label>
           {field('protein_g', 'Protein (g)', 'number')}
           {field('carbs_g', 'Carbs (g)', 'number')}
           {field('fat_g', 'Fat (g)', 'number')}
           {field('sleep_minutes', 'Sleep (minutes)', 'number')}
           {field('steps', 'Steps', 'number')}
           {field('cardio_minutes', 'Cardio (minutes)', 'number')}
-          <label className="field">
-            <span className="label">Notes</span>
-            <textarea
-              rows={3}
-              value={form.notes}
-              onChange={(e) => setForm({ ...form, notes: e.target.value })}
-              style={{ resize: 'none' }}
-            />
-          </label>
         </div>
       </div>
+
+      <label className="field" style={{ maxWidth: 900 }}>
+        <span className="label">Notes</span>
+        <textarea
+          rows={3}
+          value={form.notes}
+          onChange={(e) => setForm({ ...form, notes: e.target.value })}
+          style={{ resize: 'none' }}
+        />
+      </label>
+
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
         <button className="btn-primary" style={{ alignSelf: 'flex-start' }} onClick={save} disabled={saving}>
           {saving ? 'Saving…' : 'Save'}

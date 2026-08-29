@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { api } from '../api';
 import { useApi } from '../hooks/useApi';
 import type { Exercise, ExerciseFilters } from '../types';
@@ -112,13 +113,17 @@ export default function Exercises() {
             }}
           >
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-              <span style={{ font: "500 14.5px/1.2 'Inter Tight', sans-serif", color: 'var(--text-strong)' }}>
-                {ex.youtube_url ? (
-                  <a href={ex.youtube_url} target="_blank" rel="noreferrer">
-                    {ex.name}
+              <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Link
+                  to={`/exercises/${ex.id}/progress`}
+                  style={{ font: "500 14.5px/1.2 'Inter Tight', sans-serif", color: 'var(--text-strong)' }}
+                >
+                  {ex.name}
+                </Link>
+                {ex.youtube_url && (
+                  <a href={ex.youtube_url} target="_blank" rel="noreferrer" style={{ fontSize: 12 }} title="Watch demo">
+                    ▶
                   </a>
-                ) : (
-                  ex.name
                 )}
               </span>
               <span style={{ font: "400 11.5px/1.4 'Inter', sans-serif", color: 'var(--text-muted)' }}>

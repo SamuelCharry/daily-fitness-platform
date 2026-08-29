@@ -12,6 +12,8 @@ import Exercises from './pages/Exercises';
 import DailyLog from './pages/DailyLog';
 import Session from './pages/Session';
 import Glossary from './pages/Glossary';
+import History from './pages/History';
+import ExerciseProgress from './pages/ExerciseProgress';
 
 function RequireAuth({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth();
@@ -63,8 +65,10 @@ export default function App() {
             <Route path="/routines" element={<Routines />} />
             <Route path="/routines/:id" element={<RoutineDetail />} />
             <Route path="/exercises" element={<Exercises />} />
+            <Route path="/exercises/:id/progress" element={<ExerciseProgress />} />
             <Route path="/daily-log" element={<DailyLog />} />
             <Route path="/glossary" element={<Glossary />} />
+            <Route path="/history" element={<History />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

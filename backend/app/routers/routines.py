@@ -135,10 +135,6 @@ def update_workout(
     workout.name = body.name
     workout.day_index = body.day_index
 
-    for we in list(workout.exercises):
-        db.delete(we)
-    db.flush()
-
     _sync_workout_exercises(workout, body.exercises, current_user, db)
 
     db.commit()
@@ -153,16 +149,33 @@ def _sync_workout_exercises(workout: Workout, exercises: List[WorkoutExerciseBod
         if found != len(set(exercise_ids)):
             raise HTTPException(status_code=400, detail="One or more exercises not found")
 
+    # Match by exercise_id and update rows in place rather than delete-and-recreate,
+    # so existing WorkoutExercise ids (and the SetLog history that references them)
+    # survive routine edits like reordering or changing target sets.
+    existing_by_exercise_id = {we.exercise_id: we for we in workout.exercises}
+    keep_exercise_ids = set()
+
     for e in exercises:
-        db.add(
-            WorkoutExercise(
-                workout_id=workout.id,
-                exercise_id=e.exercise_id,
-                order_index=e.order_index,
-                target_sets=e.target_sets,
-                comments=e.comments,
+        keep_exercise_ids.add(e.exercise_id)
+        existing = existing_by_exercise_id.get(e.exercise_id)
+        if existing is not None:
+            existing.order_index = e.order_index
+            existing.target_sets = e.target_sets
+            existing.comments = e.comments
+        else:
+            db.add(
+                WorkoutExercise(
+                    workout_id=workout.id,
+                    exercise_id=e.exercise_id,
+                    order_index=e.order_index,
+                    target_sets=e.target_sets,
+                    comments=e.comments,
+                )
             )
-        )
+
+    for exercise_id, we in existing_by_exercise_id.items():
+        if exercise_id not in keep_exercise_ids:
+            db.delete(we)
 
 
 @router.get("/workouts/today")

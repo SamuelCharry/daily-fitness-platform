@@ -1,8 +1,9 @@
 import { Link } from 'react-router-dom';
 import { api } from '../api';
 import { useApi } from '../hooks/useApi';
-import type { DashboardData } from '../types';
-import BodyweightChart from '../components/BodyweightChart';
+import type { BodyStat, DashboardData, Profile } from '../types';
+import MetricTrendCard from '../components/MetricTrendCard';
+import { classifyFFMI } from '../utils/ffmi';
 
 function StatCard({ label, value }: { label: string; value: string }) {
   return (
@@ -25,6 +26,8 @@ function fmtSteps(steps: number | null) {
 
 export default function Dashboard() {
   const { data, error, loading } = useApi(() => api.get<DashboardData>('/api/dashboard'));
+  const { data: history } = useApi(() => api.get<BodyStat[]>('/api/body-stats?days=3650'));
+  const { data: profile } = useApi(() => api.get<Profile | null>('/api/profile'));
 
   if (loading) return <span className="spinner-text">Loading…</span>;
   if (error) return <span className="error-text">{error}</span>;
@@ -48,13 +51,7 @@ export default function Dashboard() {
       </section>
 
       <section style={{ display: 'grid', gridTemplateColumns: '1.65fr 1fr', gap: 16 }}>
-        <div className="card">
-          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
-            <span className="label">Bodyweight</span>
-            <span style={{ font: "400 11px/1 'Inter', sans-serif", color: 'var(--text-dim)' }}>last 8 weeks</span>
-          </div>
-          <BodyweightChart points={data.bodyweight_trend} />
-        </div>
+        <MetricTrendCard stats={history || []} />
 
         <div className="card">
           <span className="label">Today's Training</span>
@@ -155,9 +152,23 @@ export default function Dashboard() {
               </span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{ font: "400 13.5px/1 'Inter', sans-serif", color: 'var(--text-body)' }}>FFMI</span>
-              <span style={{ font: "600 14px/1 'Inter Tight', sans-serif", color: 'var(--text)' }}>
-                {data.ffmi ?? '—'}
+              <span style={{ font: "400 13.5px/1 'Inter', sans-serif", color: 'var(--text-body)' }}>
+                FFMI{' '}
+                <Link to="/glossary" style={{ color: 'var(--text-dim)', fontSize: 11 }}>
+                  (what's this?)
+                </Link>
+              </span>
+              <span style={{ font: "600 14px/1 'Inter Tight', sans-serif", color: 'var(--text)', textAlign: 'right' }}>
+                {data.ffmi != null ? (
+                  <>
+                    {data.ffmi}{' '}
+                    <span style={{ font: "400 11px/1 'Inter', sans-serif", color: 'var(--text-dim)' }}>
+                      · {classifyFFMI(data.ffmi, profile?.sex === 'female' ? 'female' : 'male')}
+                    </span>
+                  </>
+                ) : (
+                  '—'
+                )}
               </span>
             </div>
           </div>

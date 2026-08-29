@@ -1,4 +1,4 @@
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -55,6 +55,22 @@ def _serialize_session(session: WorkoutSession):
             for s in session.sets
         ],
     }
+
+
+@router.get("")
+def list_sessions(
+    days: int = 180, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
+):
+    since = date.today() - timedelta(days=days)
+    sessions = (
+        db.query(WorkoutSession)
+        .join(Workout)
+        .join(Routine)
+        .filter(Routine.user_id == current_user.id, WorkoutSession.date >= since)
+        .order_by(WorkoutSession.date.desc())
+        .all()
+    )
+    return [_serialize_session(s) for s in sessions]
 
 
 @router.post("")

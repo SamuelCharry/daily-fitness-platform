@@ -24,7 +24,10 @@ const NAV_GROUPS: NavGroup[] = [
   },
   {
     heading: 'Tracking',
-    items: [{ to: '/daily-log', label: 'Daily Log' }],
+    items: [
+      { to: '/daily-log', label: 'Daily Log' },
+      { to: '/history', label: 'History' },
+    ],
   },
   {
     heading: 'Analysis',

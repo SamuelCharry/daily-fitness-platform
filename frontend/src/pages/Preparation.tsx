@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { api } from '../api';
 import { useApi } from '../hooks/useApi';
 import type { BodyStat, Profile } from '../types';
+import MacroCalculator from '../components/MacroCalculator';
+import PhaseSuggestionCard from '../components/PhaseSuggestionCard';
 
 function average(values: number[]) {
   if (!values.length) return null;
@@ -137,6 +139,11 @@ export default function Preparation() {
           {saved && <span style={{ marginLeft: 12, color: 'var(--text-dim)', fontSize: 12 }}>Saved.</span>}
         </div>
       </div>
+
+      <section style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+        <MacroCalculator profile={profile ?? null} weightKg={latestWeight} />
+        <PhaseSuggestionCard stats={stats || []} phase={form.current_phase} />
+      </section>
     </>
   );
 }
