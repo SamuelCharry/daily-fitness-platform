@@ -6,7 +6,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from ..auth import get_current_user, get_db
-from ..models import Exercise, Routine, User, Workout, WorkoutExercise
+from ..models import Exercise, Routine, SetLog, User, Workout, WorkoutExercise, WorkoutSession
 
 router = APIRouter(prefix="/api", tags=["routines"])
 
@@ -67,6 +67,24 @@ def _get_owned_routine(routine_id: int, user: User, db: Session) -> Routine:
     return routine
 
 
+def _cascade_delete_workout(workout: Workout, db: Session):
+    """SQLite doesn't enforce FK constraints here, so sessions/sets/exercise
+    rows referencing this workout have to be removed explicitly before it."""
+    workout_exercise_ids = [we.id for we in workout.exercises]
+    session_ids = [
+        s.id for s in db.query(WorkoutSession.id).filter(WorkoutSession.workout_id == workout.id).all()
+    ]
+    if session_ids:
+        db.query(SetLog).filter(SetLog.session_id.in_(session_ids)).delete(synchronize_session=False)
+        db.query(WorkoutSession).filter(WorkoutSession.id.in_(session_ids)).delete(synchronize_session=False)
+    if workout_exercise_ids:
+        db.query(SetLog).filter(SetLog.workout_exercise_id.in_(workout_exercise_ids)).delete(
+            synchronize_session=False
+        )
+    db.query(WorkoutExercise).filter(WorkoutExercise.workout_id == workout.id).delete(synchronize_session=False)
+    db.delete(workout)
+
+
 @router.get("/routines")
 def list_routines(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     routines = db.query(Routine).filter(Routine.user_id == current_user.id).order_by(Routine.id).all()
@@ -95,6 +113,17 @@ def activate_routine(
     db.commit()
     db.refresh(target)
     return _serialize_routine(target)
+
+
+@router.delete("/routines/{routine_id}", status_code=204)
+def delete_routine(
+    routine_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
+):
+    routine = _get_owned_routine(routine_id, current_user, db)
+    for workout in list(routine.workouts):
+        _cascade_delete_workout(workout, db)
+    db.delete(routine)
+    db.commit()
 
 
 @router.post("/routines/{routine_id}/workouts")
@@ -140,6 +169,24 @@ def update_workout(
     db.commit()
     db.refresh(workout)
     return _serialize_workout(workout)
+
+
+@router.delete("/workouts/{workout_id}", status_code=204)
+def delete_workout(
+    workout_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    workout = (
+        db.query(Workout)
+        .join(Routine)
+        .filter(Workout.id == workout_id, Routine.user_id == current_user.id)
+        .first()
+    )
+    if workout is None:
+        raise HTTPException(status_code=404, detail="Workout not found")
+    _cascade_delete_workout(workout, db)
+    db.commit()
 
 
 def _sync_workout_exercises(workout: Workout, exercises: List[WorkoutExerciseBody], user: User, db: Session):

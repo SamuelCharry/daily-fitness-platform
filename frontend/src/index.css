@@ -1,7 +1,9 @@
 :root {
   /* Palette lifted from the TNF book covers/interiors: true black, vivid red, white. */
+  color-scheme: dark;
   --bg: #0b0b0c;
   --bg-alt: #141415;
+  --bg-raised: #101011;
   --border: #262627;
   --border2: #333335;
   --input-bg: #19191a;
@@ -15,6 +17,77 @@
   --accent-hover: #ff4550;
   --accent-text: #ffffff;
   --danger: #f5a623;
+  --nav-inactive: #a8a8aa;
+  --hover-bg: #262627;
+}
+
+/* Light mode: same red/black/white identity, inverted for a bright surface. */
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme='dark']) {
+    color-scheme: light;
+    --bg: #f6f6f7;
+    --bg-alt: #ffffff;
+    --bg-raised: #f0f0f1;
+    --border: #e3e3e5;
+    --border2: #d4d4d6;
+    --input-bg: #ffffff;
+    --text: #1c1c1e;
+    --text-strong: #08080a;
+    --text-body: #2c2c2e;
+    --text-muted: #5c5c5e;
+    --text-dim: #7a7a7c;
+    --text-faint: #9c9c9e;
+    --accent: #e0111f;
+    --accent-hover: #c60e1b;
+    --accent-text: #ffffff;
+    --danger: #b96a00;
+    --nav-inactive: #6a6a6c;
+    --hover-bg: #ececee;
+  }
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+  --bg: #f6f6f7;
+  --bg-alt: #ffffff;
+  --bg-raised: #f0f0f1;
+  --border: #e3e3e5;
+  --border2: #d4d4d6;
+  --input-bg: #ffffff;
+  --text: #1c1c1e;
+  --text-strong: #08080a;
+  --text-body: #2c2c2e;
+  --text-muted: #5c5c5e;
+  --text-dim: #7a7a7c;
+  --text-faint: #9c9c9e;
+  --accent: #e0111f;
+  --accent-hover: #c60e1b;
+  --accent-text: #ffffff;
+  --danger: #b96a00;
+  --nav-inactive: #6a6a6c;
+  --hover-bg: #ececee;
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --bg: #0b0b0c;
+  --bg-alt: #141415;
+  --bg-raised: #101011;
+  --border: #262627;
+  --border2: #333335;
+  --input-bg: #19191a;
+  --text: #f2f2f2;
+  --text-strong: #ffffff;
+  --text-body: #d6d6d6;
+  --text-muted: #9a9a9c;
+  --text-dim: #78787a;
+  --text-faint: #5a5a5c;
+  --accent: #ff1f2e;
+  --accent-hover: #ff4550;
+  --accent-text: #ffffff;
+  --danger: #f5a623;
+  --nav-inactive: #a8a8aa;
+  --hover-bg: #262627;
 }
 
 * {
@@ -32,6 +105,7 @@ body {
   color: var(--text);
   font-family: 'Inter', system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
+  transition: background-color 0.15s ease, color 0.15s ease;
 }
 
 #root {

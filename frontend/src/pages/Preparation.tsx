@@ -57,11 +57,7 @@ export default function Preparation() {
 
   return (
     <>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <span className="eyebrow">Analysis</span>
-          <h1 className="page-title">Preparation</h1>
-        </div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
         <div style={{ display: 'flex', gap: 4, background: 'var(--bg-alt)', border: '1px solid var(--border)', borderRadius: 8, padding: 3 }}>
           {['cut', 'maintain', 'bulk'].map((p) => (
             <button
@@ -70,7 +66,7 @@ export default function Preparation() {
               style={{
                 border: 'none',
                 background: form.current_phase === p ? 'var(--accent)' : 'transparent',
-                color: form.current_phase === p ? 'var(--accent-text)' : '#a8a8aa',
+                color: form.current_phase === p ? 'var(--accent-text)' : 'var(--nav-inactive)',
                 padding: '7px 16px',
                 borderRadius: 6,
                 font: "600 12px/1 'Inter Tight', sans-serif",

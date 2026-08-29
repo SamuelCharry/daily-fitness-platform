@@ -5,63 +5,26 @@ import { useApi } from '../hooks/useApi';
 import type { Exercise, Routine, Workout, WorkoutExerciseEntry } from '../types';
 import { loadPriorities, savePriorities, type PriorityMap } from '../utils/musclePriority';
 import { computeMuscleVolumeRows, type MuscleVolumeRow } from '../utils/volumeGuideline';
+import { useLanguage } from '../i18n/LanguageContext';
+import MuscleExercisePicker from '../components/MuscleExercisePicker';
 
-function ExercisePicker({ onPick }: { onPick: (ex: Exercise) => void }) {
-  const [search, setSearch] = useState('');
-  const { data: results } = useApi(
-    () => (search.trim().length > 1 ? api.get<Exercise[]>(`/api/exercises?search=${encodeURIComponent(search)}`) : Promise.resolve([])),
-    [search],
-  );
-
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, position: 'relative' }}>
-      <input
-        type="text"
-        placeholder="Search exercise to add…"
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-      />
-      {results && results.length > 0 && (
-        <div
-          style={{
-            background: 'var(--input-bg)',
-            border: '1px solid var(--border2)',
-            borderRadius: 8,
-            maxHeight: 220,
-            overflowY: 'auto',
-          }}
-        >
-          {results.map((ex) => (
-            <div
-              key={ex.id}
-              onClick={() => {
-                onPick(ex);
-                setSearch('');
-              }}
-              style={{ padding: '8px 12px', cursor: 'pointer', fontSize: 13, color: 'var(--text)' }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = '#262627')}
-              onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
-            >
-              {ex.name} <span style={{ color: 'var(--text-dim)' }}>· {ex.muscle.replace('_', ' ')}</span>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
+interface RedundancyFlag {
+  withName: string;
+  jointAction: string;
+  plane: string | null;
 }
 
 // Flags exercises in the same workout that share both muscle and joint action - the
 // manual's definition of redundancy (same muscle through a very similar movement).
-function findRedundant(exercises: WorkoutExerciseEntry[]): Map<number, string> {
-  const flagged = new Map<number, string>();
+function findRedundant(exercises: WorkoutExerciseEntry[]): Map<number, RedundancyFlag> {
+  const flagged = new Map<number, RedundancyFlag>();
   for (let i = 0; i < exercises.length; i++) {
     for (let j = 0; j < exercises.length; j++) {
       if (i === j) continue;
       const a = exercises[i];
       const b = exercises[j];
       if (a.muscle === b.muscle && a.joint_action && a.joint_action === b.joint_action && !flagged.has(a.exercise_id)) {
-        flagged.set(a.exercise_id, b.name);
+        flagged.set(a.exercise_id, { withName: b.name, jointAction: a.joint_action, plane: a.plane });
       }
     }
   }
@@ -73,11 +36,13 @@ function WorkoutCard({
   priorities,
   volumeByMuscle,
   onChanged,
+  onDeleted,
 }: {
   workout: Workout;
   priorities: PriorityMap;
   volumeByMuscle: Map<string, MuscleVolumeRow>;
   onChanged: () => void;
+  onDeleted: () => void;
 }) {
   const [pickerOpen, setPickerOpen] = useState(false);
   const redundant = findRedundant(workout.exercises);
@@ -130,6 +95,12 @@ function WorkoutCard({
     persist(sorted);
   }
 
+  async function deleteWorkout() {
+    if (!window.confirm(`Delete "${workout.name}"? This removes its exercises and logged sessions too.`)) return;
+    await api.delete(`/api/workouts/${workout.id}`);
+    onDeleted();
+  }
+
   const hasPriorityData = workout.exercises.some((e) => priorities[e.muscle] != null);
 
   return (
@@ -145,10 +116,17 @@ function WorkoutCard({
           <button className="btn-ghost" onClick={() => setPickerOpen((v) => !v)}>
             {pickerOpen ? 'Close' : '+ Add Exercise'}
           </button>
+          <button
+            onClick={deleteWorkout}
+            title="Delete this workout day"
+            style={{ border: 'none', background: 'transparent', color: 'var(--text-dim)', fontSize: 13, padding: '6px 8px' }}
+          >
+            Delete
+          </button>
         </div>
       </div>
 
-      {pickerOpen && <ExercisePicker onPick={addExercise} />}
+      {pickerOpen && <MuscleExercisePicker onPick={addExercise} />}
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         {workout.exercises.map((ex, i) => {
@@ -157,7 +135,7 @@ function WorkoutCard({
             <div
               key={ex.exercise_id}
               style={{
-                background: '#101011',
+                background: 'var(--bg-raised)',
                 border: '1px solid var(--border)',
                 borderRadius: 10,
                 padding: '12px 16px',
@@ -172,7 +150,7 @@ function WorkoutCard({
                 </span>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                   <Link
-                    to={`/exercises/${ex.exercise_id}/progress`}
+                    to={`/app/exercises/${ex.exercise_id}/progress`}
                     style={{ font: "500 14.5px/1.2 'Inter Tight', sans-serif", color: 'var(--text-strong)' }}
                   >
                     {ex.name}
@@ -206,8 +184,10 @@ function WorkoutCard({
               </div>
               {redundant.has(ex.exercise_id) && (
                 <span style={{ font: "400 11.5px/1.4 'Inter', sans-serif", color: 'var(--accent)' }}>
-                  ⚠ Redundant with "{redundant.get(ex.exercise_id)}" — same muscle, same joint action. Consider varying
-                  the movement pattern.
+                  ⚠ Redundant with "{redundant.get(ex.exercise_id)!.withName}" — both hit {redundant.get(ex.exercise_id)!.jointAction}
+                  {redundant.get(ex.exercise_id)!.plane ? ` (${redundant.get(ex.exercise_id)!.plane} plane)` : ''}. They compete for the
+                  same recovery instead of adding new stimulus — swap one for a different joint action on this muscle, or drop it and add
+                  its sets to the other.
                 </span>
               )}
             </div>
@@ -243,7 +223,7 @@ function MusclePriorityCard({ muscles, priorities, onSet }: { muscles: string[];
                   style={{
                     border: '1px solid var(--border2)',
                     background: priorities[m] === r ? 'var(--accent)' : 'transparent',
-                    color: priorities[m] === r ? 'var(--accent-text)' : '#a8a8aa',
+                    color: priorities[m] === r ? 'var(--accent-text)' : 'var(--nav-inactive)',
                     width: 30,
                     height: 30,
                     borderRadius: 6,
@@ -267,6 +247,20 @@ const STATUS_LABEL: Record<MuscleVolumeRow['status'], string> = {
   ok: 'On track',
   high: 'High',
 };
+
+function explainStatus(r: MuscleVolumeRow): string {
+  const range = `${r.minRecommended}${r.maxRecommended != null ? `–${r.maxRecommended}` : '+'} sets/week`;
+  if (r.status === 'missing') {
+    return `Nothing is training this muscle at all. Even once a week, aim for at least ${r.minRecommended} sets in that session.`;
+  }
+  if (r.status === 'low') {
+    return `At ${r.frequency}x/week frequency, the evidence-backed range is ${range} — ${r.weeklySets} is below that, so this muscle is under-stimulated for how often it's trained.`;
+  }
+  if (r.status === 'high') {
+    return `At ${r.frequency}x/week frequency, ${range} is the range most people can recover from — ${r.weeklySets} sets is past that, adding fatigue without much extra growth signal.`;
+  }
+  return `At ${r.frequency}x/week frequency, ${r.weeklySets} sets falls inside the ${range} range — no change needed.`;
+}
 
 function VolumeFrequencyCard({ rows }: { rows: MuscleVolumeRow[] }) {
   if (rows.length === 0) return null;
@@ -315,10 +309,14 @@ function VolumeFrequencyCard({ rows }: { rows: MuscleVolumeRow[] }) {
             {r.maxRecommended != null ? `–${r.maxRecommended}` : '+'}
           </span>
           <span
+            title={explainStatus(r)}
             style={{
               font: "600 11px/1 'Inter Tight', sans-serif",
               color: r.status === 'ok' ? 'var(--text-dim)' : 'var(--accent)',
               textTransform: 'uppercase',
+              textDecoration: 'underline dotted',
+              textUnderlineOffset: 3,
+              cursor: 'help',
             }}
           >
             {STATUS_LABEL[r.status]}
@@ -330,6 +328,7 @@ function VolumeFrequencyCard({ rows }: { rows: MuscleVolumeRow[] }) {
 }
 
 export default function RoutineDetail() {
+  const { t } = useLanguage();
   const { id } = useParams();
   const { data: routines, loading, reload } = useApi(() => api.get<Routine[]>('/api/routines'));
   const { data: allExercises } = useApi(() => api.get<Exercise[]>('/api/exercises'));
@@ -370,8 +369,8 @@ export default function RoutineDetail() {
   return (
     <>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-        <Link to="/routines" style={{ fontSize: 12, color: 'var(--text-dim)' }}>
-          ← All routines
+        <Link to="/app/routines" style={{ fontSize: 12, color: 'var(--text-dim)' }}>
+          ← {t('pages.routines')}
         </Link>
         <h1 className="page-title">{routine.name}</h1>
       </div>
@@ -379,7 +378,14 @@ export default function RoutineDetail() {
       <MusclePriorityCard muscles={muscles} priorities={priorities} onSet={handleSetPriority} />
 
       {routine.workouts.map((w) => (
-        <WorkoutCard key={w.id} workout={w} priorities={priorities} volumeByMuscle={volumeByMuscle} onChanged={reload} />
+        <WorkoutCard
+          key={w.id}
+          workout={w}
+          priorities={priorities}
+          volumeByMuscle={volumeByMuscle}
+          onChanged={reload}
+          onDeleted={reload}
+        />
       ))}
 
       <div className="card" style={{ maxWidth: 500 }}>

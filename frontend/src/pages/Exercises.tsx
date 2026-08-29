@@ -3,8 +3,10 @@ import { Link } from 'react-router-dom';
 import { api } from '../api';
 import { useApi } from '../hooks/useApi';
 import type { Exercise, ExerciseFilters } from '../types';
+import { useLanguage } from '../i18n/LanguageContext';
 
 export default function Exercises() {
+  const { t } = useLanguage();
   const [search, setSearch] = useState('');
   const [muscleGroup, setMuscleGroup] = useState<string | null>(null);
   const [jointAction, setJointAction] = useState<string | null>(null);
@@ -33,8 +35,8 @@ export default function Exercises() {
   return (
     <>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-        <span className="eyebrow">Training</span>
-        <h1 className="page-title">Exercise Library</h1>
+        <span className="eyebrow">{t('pages.training')}</span>
+        <h1 className="page-title">{t('pages.exerciseLibrary')}</h1>
       </div>
 
       <input
@@ -115,7 +117,7 @@ export default function Exercises() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
               <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <Link
-                  to={`/exercises/${ex.id}/progress`}
+                  to={`/app/exercises/${ex.id}/progress`}
                   style={{ font: "500 14.5px/1.2 'Inter Tight', sans-serif", color: 'var(--text-strong)' }}
                 >
                   {ex.name}

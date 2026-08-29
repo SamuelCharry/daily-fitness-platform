@@ -5,6 +5,7 @@ import { useApi } from '../hooks/useApi';
 import type { Exercise, Routine, WorkoutSession } from '../types';
 import AreaTrendChart from '../components/AreaTrendChart';
 import { changeOverDays, trendDirection, type MetricPoint } from '../utils/trends';
+import { useLanguage } from '../i18n/LanguageContext';
 
 type MetricKey = 'topWeight' | 'oneRm' | 'volume';
 
@@ -15,6 +16,7 @@ const METRICS: { key: MetricKey; label: string; unit: string }[] = [
 ];
 
 export default function ExerciseProgress() {
+  const { t } = useLanguage();
   const { id } = useParams();
   const exerciseId = Number(id);
   const [metricKey, setMetricKey] = useState<MetricKey>('topWeight');
@@ -86,10 +88,10 @@ export default function ExerciseProgress() {
   return (
     <>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-        <Link to="/exercises" style={{ fontSize: 12, color: 'var(--text-dim)' }}>
-          ← Exercise Library
+        <Link to="/app/exercises" style={{ fontSize: 12, color: 'var(--text-dim)' }}>
+          ← {t('pages.exerciseLibrary')}
         </Link>
-        <span className="eyebrow">Progress</span>
+        <span className="eyebrow">{t('pages.progress')}</span>
         <h1 className="page-title">{exercise?.name || (loading ? 'Loading…' : 'Exercise')}</h1>
         {exercise && (
           <span style={{ font: "400 13px/1.4 'Inter', sans-serif", color: 'var(--text-muted)' }}>
@@ -118,7 +120,7 @@ export default function ExerciseProgress() {
                 style={{
                   border: 'none',
                   background: metricKey === m.key ? 'var(--accent)' : 'transparent',
-                  color: metricKey === m.key ? 'var(--accent-text)' : '#a8a8aa',
+                  color: metricKey === m.key ? 'var(--accent-text)' : 'var(--nav-inactive)',
                   padding: '6px 14px',
                   borderRadius: 6,
                   font: "600 12px/1 'Inter Tight', sans-serif",

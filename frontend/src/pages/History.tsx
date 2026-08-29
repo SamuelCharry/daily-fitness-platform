@@ -2,8 +2,10 @@ import { api } from '../api';
 import { useApi } from '../hooks/useApi';
 import type { Routine, WorkoutSession } from '../types';
 import { computeRirBreakdown, findStalls, type ExerciseNameLookup } from '../utils/sessionAnalysis';
+import { useLanguage } from '../i18n/LanguageContext';
 
 export default function History() {
+  const { t } = useLanguage();
   const { data: sessions, loading: sessionsLoading, error } = useApi(() => api.get<WorkoutSession[]>('/api/sessions?days=180'));
   const { data: routines, loading: routinesLoading } = useApi(() => api.get<Routine[]>('/api/routines'));
 
@@ -24,8 +26,8 @@ export default function History() {
   return (
     <>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-        <span className="eyebrow">Tracking</span>
-        <h1 className="page-title">History</h1>
+        <span className="eyebrow">{t('pages.tracking')}</span>
+        <h1 className="page-title">{t('pages.history')}</h1>
       </div>
 
       {loading && <span className="spinner-text">Loading…</span>}
@@ -41,7 +43,7 @@ export default function History() {
               <div style={{ display: 'flex', height: 10, borderRadius: 5, overflow: 'hidden' }}>
                 <div style={{ width: `${(rir.workingSets / rir.total) * 100}%`, background: 'var(--accent)' }} title="Working sets (0-2 RIR)" />
                 <div style={{ width: `${(rir.looseSets / rir.total) * 100}%`, background: '#4a4a4c' }} title="Loose sets (3+ RIR)" />
-                <div style={{ width: `${(rir.unrated / rir.total) * 100}%`, background: '#262627' }} title="No RIR logged" />
+                <div style={{ width: `${(rir.unrated / rir.total) * 100}%`, background: 'var(--border)' }} title="No RIR logged" />
               </div>
               <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
                 <span style={{ font: "400 12px/1 'Inter', sans-serif", color: 'var(--text-muted)' }}>

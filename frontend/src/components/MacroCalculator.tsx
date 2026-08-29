@@ -38,7 +38,7 @@ export default function MacroCalculator({ profile, weightKg }: { profile: Profil
             style={{
               border: 'none',
               background: aggressiveness === a ? 'var(--accent)' : 'transparent',
-              color: aggressiveness === a ? 'var(--accent-text)' : '#a8a8aa',
+              color: aggressiveness === a ? 'var(--accent-text)' : 'var(--nav-inactive)',
               padding: '6px 14px',
               borderRadius: 6,
               font: "600 12px/1 'Inter Tight', sans-serif",

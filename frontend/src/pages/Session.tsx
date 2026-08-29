@@ -51,7 +51,7 @@ export default function Session() {
   async function finish() {
     if (!session) return;
     await api.post(`/api/sessions/${session.id}/finish`);
-    navigate('/', { replace: true });
+    navigate('/app', { replace: true });
   }
 
   if (starting) return <span className="spinner-text">Starting workout…</span>;

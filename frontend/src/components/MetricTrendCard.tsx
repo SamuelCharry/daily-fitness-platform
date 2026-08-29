@@ -65,7 +65,7 @@ export default function MetricTrendCard({ stats }: { stats: BodyStat[] }) {
               style={{
                 border: 'none',
                 background: metricKey === m.key ? 'var(--accent)' : 'transparent',
-                color: metricKey === m.key ? 'var(--accent-text)' : '#a8a8aa',
+                color: metricKey === m.key ? 'var(--accent-text)' : 'var(--nav-inactive)',
                 padding: '6px 14px',
                 borderRadius: 6,
                 font: "600 12px/1 'Inter Tight', sans-serif",
@@ -83,7 +83,7 @@ export default function MetricTrendCard({ stats }: { stats: BodyStat[] }) {
               style={{
                 border: 'none',
                 background: rangeKey === r.key ? 'var(--accent)' : 'transparent',
-                color: rangeKey === r.key ? 'var(--accent-text)' : '#a8a8aa',
+                color: rangeKey === r.key ? 'var(--accent-text)' : 'var(--nav-inactive)',
                 padding: '5px 10px',
                 borderRadius: 5,
                 font: "600 11px/1 'Inter Tight', sans-serif",

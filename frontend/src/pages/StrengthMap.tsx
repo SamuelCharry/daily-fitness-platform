@@ -54,7 +54,7 @@ const BACK_SLOTS: Record<string, string> = {
   legLowerR: 'calves',
 };
 
-const NO_DATA_COLOR = '#333335';
+const NO_DATA_COLOR = 'var(--border2)';
 
 function colorFor(ratio: number) {
   const hue = 230 - ratio * 205;
@@ -81,11 +81,7 @@ export default function StrengthMap() {
 
   return (
     <>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <span className="eyebrow">Analysis</span>
-          <h1 className="page-title">Strength Map</h1>
-        </div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
         <div style={{ display: 'flex', gap: 4, background: 'var(--bg-alt)', border: '1px solid var(--border)', borderRadius: 8, padding: 3 }}>
           {(['front', 'back'] as View[]).map((v) => (
             <button
@@ -94,7 +90,7 @@ export default function StrengthMap() {
               style={{
                 border: 'none',
                 background: view === v ? 'var(--accent)' : 'transparent',
-                color: view === v ? 'var(--accent-text)' : '#a8a8aa',
+                color: view === v ? 'var(--accent-text)' : 'var(--nav-inactive)',
                 padding: '7px 16px',
                 borderRadius: 6,
                 font: "600 12px/1 'Inter Tight', sans-serif",
@@ -113,8 +109,8 @@ export default function StrengthMap() {
         <section style={{ display: 'grid', gridTemplateColumns: '1fr 1.3fr', gap: 16 }}>
           <div className="card" style={{ alignItems: 'center', padding: 28 }}>
             <svg viewBox="0 0 240 420" width={230} height={400}>
-              <circle cx={120} cy={38} r={24} fill="#333335" />
-              <rect x={108} y={60} width={24} height={14} rx={4} fill="#333335" />
+              <circle cx={120} cy={38} r={24} fill="var(--border2)" />
+              <rect x={108} y={60} width={24} height={14} rx={4} fill="var(--border2)" />
               {LAYOUT.map((z) => {
                 const key = slots[z.slot];
                 const ratio = ratioByKey[key];
@@ -158,7 +154,7 @@ export default function StrengthMap() {
                     <span style={{ width: 110, flex: 'none', font: "400 13px/1 'Inter', sans-serif", color: 'var(--text-body)' }}>
                       {m.label}
                     </span>
-                    <div style={{ flex: 1, height: 8, borderRadius: 4, background: '#202022', overflow: 'hidden' }}>
+                    <div style={{ flex: 1, height: 8, borderRadius: 4, background: 'var(--border)', overflow: 'hidden' }}>
                       <div style={{ height: '100%', borderRadius: 4, background: colorFor(m.ratio), width: m.pct }} />
                     </div>
                     <span style={{ width: 36, textAlign: 'right', font: "600 12px/1 'Inter Tight', sans-serif", color: 'var(--text)' }}>

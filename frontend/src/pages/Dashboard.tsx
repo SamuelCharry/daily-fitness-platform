@@ -1,9 +1,15 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api';
 import { useApi } from '../hooks/useApi';
 import type { BodyStat, DashboardData, Profile } from '../types';
 import MetricTrendCard from '../components/MetricTrendCard';
 import { classifyFFMI } from '../utils/ffmi';
+import { useLanguage } from '../i18n/LanguageContext';
+import Preparation from './Preparation';
+import StrengthMap from './StrengthMap';
+
+type Tab = 'overview' | 'preparation' | 'strengthMap';
 
 function StatCard({ label, value }: { label: string; value: string }) {
   return (
@@ -24,7 +30,8 @@ function fmtSteps(steps: number | null) {
   return steps >= 1000 ? `${(steps / 1000).toFixed(1)}k` : String(steps);
 }
 
-export default function Dashboard() {
+function OverviewTab() {
+  const { t } = useLanguage();
   const { data, error, loading } = useApi(() => api.get<DashboardData>('/api/dashboard'));
   const { data: history } = useApi(() => api.get<BodyStat[]>('/api/body-stats?days=3650'));
   const { data: profile } = useApi(() => api.get<Profile | null>('/api/profile'));
@@ -33,28 +40,19 @@ export default function Dashboard() {
   if (error) return <span className="error-text">{error}</span>;
   if (!data) return null;
 
-  const phaseLabel = data.phase ? data.phase[0].toUpperCase() + data.phase.slice(1) : 'No phase set';
-
   return (
     <>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <span className="eyebrow">Preparation</span>
-          <h1 className="page-title">{phaseLabel}</h1>
-        </div>
-      </div>
-
       <section style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 16 }}>
-        <StatCard label="Weight" value={data.weight != null ? `${data.weight} kg` : '—'} />
-        <StatCard label="Sleep" value={fmtSleep(data.sleep_minutes)} />
-        <StatCard label="Steps" value={fmtSteps(data.steps)} />
+        <StatCard label={t('dashboard.weight')} value={data.weight != null ? `${data.weight} kg` : '—'} />
+        <StatCard label={t('dashboard.sleep')} value={fmtSleep(data.sleep_minutes)} />
+        <StatCard label={t('dashboard.steps')} value={fmtSteps(data.steps)} />
       </section>
 
       <section style={{ display: 'grid', gridTemplateColumns: '1.65fr 1fr', gap: 16 }}>
         <MetricTrendCard stats={history || []} />
 
         <div className="card">
-          <span className="label">Today's Training</span>
+          <span className="label">{t('dashboard.todaysTraining')}</span>
           {data.today_workout ? (
             <>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
@@ -66,20 +64,20 @@ export default function Dashboard() {
                 </span>
               </div>
               <Link
-                to={`/session/${data.today_workout.id}`}
+                to={`/app/session/${data.today_workout.id}`}
                 className="btn-primary"
                 style={{ marginTop: 'auto', textAlign: 'center' }}
               >
-                Start Workout
+                {t('dashboard.startWorkout')}
               </Link>
             </>
           ) : (
             <>
               <span style={{ font: "400 13px/1.4 'Inter', sans-serif", color: 'var(--text-muted)' }}>
-                No active routine yet.
+                {t('dashboard.noRoutine')}
               </span>
-              <Link to="/routines" className="btn-ghost" style={{ marginTop: 'auto', textAlign: 'center' }}>
-                Set up a routine
+              <Link to="/app/routines" className="btn-ghost" style={{ marginTop: 'auto', textAlign: 'center' }}>
+                {t('dashboard.setUpRoutine')}
               </Link>
             </>
           )}
@@ -88,7 +86,7 @@ export default function Dashboard() {
 
       <section style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
         <div className="card">
-          <span className="label">Performance</span>
+          <span className="label">{t('dashboard.performance')}</span>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             {data.performance.map((r) => (
               <div
@@ -110,8 +108,8 @@ export default function Dashboard() {
 
         <div className="card">
           <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
-            <span className="label">Preparation</span>
-            <span style={{ font: "400 11px/1 'Inter', sans-serif", color: 'var(--text-dim)' }}>body fat estimate</span>
+            <span className="label">{t('dashboard.tabPreparation')}</span>
+            <span style={{ font: "400 11px/1 'Inter', sans-serif", color: 'var(--text-dim)' }}>{t('dashboard.bodyFatEstimate')}</span>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12 }}>
             {[
@@ -146,7 +144,7 @@ export default function Dashboard() {
                 borderBottom: '1px solid var(--border)',
               }}
             >
-              <span style={{ font: "400 13.5px/1 'Inter', sans-serif", color: 'var(--text-body)' }}>Adherence</span>
+              <span style={{ font: "400 13.5px/1 'Inter', sans-serif", color: 'var(--text-body)' }}>{t('dashboard.adherence')}</span>
               <span style={{ font: "600 14px/1 'Inter Tight', sans-serif", color: 'var(--text)' }}>
                 {data.adherence_pct}%
               </span>
@@ -154,8 +152,8 @@ export default function Dashboard() {
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <span style={{ font: "400 13.5px/1 'Inter', sans-serif", color: 'var(--text-body)' }}>
                 FFMI{' '}
-                <Link to="/glossary" style={{ color: 'var(--text-dim)', fontSize: 11 }}>
-                  (what's this?)
+                <Link to="/app/glossary" style={{ color: 'var(--text-dim)', fontSize: 11 }}>
+                  {t('dashboard.ffmiWhatsThis')}
                 </Link>
               </span>
               <span style={{ font: "600 14px/1 'Inter Tight', sans-serif", color: 'var(--text)', textAlign: 'right' }}>
@@ -174,6 +172,47 @@ export default function Dashboard() {
           </div>
         </div>
       </section>
+    </>
+  );
+}
+
+export default function Dashboard() {
+  const { t } = useLanguage();
+  const [tab, setTab] = useState<Tab>('overview');
+
+  const TABS: { key: Tab; labelKey: string }[] = [
+    { key: 'overview', labelKey: 'dashboard.tabOverview' },
+    { key: 'preparation', labelKey: 'dashboard.tabPreparation' },
+    { key: 'strengthMap', labelKey: 'dashboard.tabStrengthMap' },
+  ];
+
+  return (
+    <>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+        <h1 className="page-title">{t('dashboard.title')}</h1>
+        <div style={{ display: 'flex', gap: 4, background: 'var(--bg-alt)', border: '1px solid var(--border)', borderRadius: 8, padding: 3 }}>
+          {TABS.map((tb) => (
+            <button
+              key={tb.key}
+              onClick={() => setTab(tb.key)}
+              style={{
+                border: 'none',
+                background: tab === tb.key ? 'var(--accent)' : 'transparent',
+                color: tab === tb.key ? 'var(--accent-text)' : 'var(--nav-inactive)',
+                padding: '7px 16px',
+                borderRadius: 6,
+                font: "600 12px/1 'Inter Tight', sans-serif",
+              }}
+            >
+              {t(tb.labelKey)}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {tab === 'overview' && <OverviewTab />}
+      {tab === 'preparation' && <Preparation />}
+      {tab === 'strengthMap' && <StrengthMap />}
     </>
   );
 }

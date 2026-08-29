@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { api } from '../api';
 import { useApi } from '../hooks/useApi';
 import type { BodyStat } from '../types';
+import { useLanguage } from '../i18n/LanguageContext';
 
 const today = new Date().toISOString().slice(0, 10);
 
@@ -48,6 +49,7 @@ function toForm(stat: BodyStat | undefined): FormState {
 }
 
 export default function DailyLog() {
+  const { t } = useLanguage();
   const { data: recent, loading, reload } = useApi(() => api.get<BodyStat[]>('/api/body-stats?days=1'));
   const [form, setForm] = useState<FormState>(EMPTY);
   const [saving, setSaving] = useState(false);
@@ -107,9 +109,9 @@ export default function DailyLog() {
   return (
     <>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-        <span className="eyebrow">Tracking</span>
+        <span className="eyebrow">{t('pages.tracking')}</span>
         <h1 className="page-title">
-          Daily Log —{' '}
+          {t('pages.dailyLog')} —{' '}
           {new Date(today + 'T00:00:00').toLocaleDateString(undefined, { month: 'long', day: 'numeric' })}
         </h1>
       </div>

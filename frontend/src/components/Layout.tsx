@@ -1,42 +1,38 @@
 import { useEffect, useRef, useState } from 'react';
-import { NavLink, Outlet, useLocation } from 'react-router-dom';
+import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
+import { useLanguage } from '../i18n/LanguageContext';
+import QuickPreferences from '../components/QuickPreferences';
 
 interface NavItem {
   to: string;
-  label: string;
+  labelKey: string;
 }
 
 interface NavGroup {
-  heading: string;
+  headingKey: string;
   to?: string;
   items: NavItem[];
 }
 
 const NAV_GROUPS: NavGroup[] = [
-  { heading: 'Dashboard', to: '/', items: [] },
+  { headingKey: 'nav.dashboard', to: '/app', items: [] },
   {
-    heading: 'Training',
+    headingKey: 'nav.training',
     items: [
-      { to: '/routines', label: 'Routines' },
-      { to: '/exercises', label: 'Exercises' },
+      { to: '/app/routines', labelKey: 'nav.routines' },
+      { to: '/app/exercises', labelKey: 'nav.exercises' },
     ],
   },
   {
-    heading: 'Tracking',
+    headingKey: 'nav.tracking',
     items: [
-      { to: '/daily-log', label: 'Daily Log' },
-      { to: '/history', label: 'History' },
+      { to: '/app/daily-log', labelKey: 'nav.dailyLog' },
+      { to: '/app/history', labelKey: 'nav.history' },
     ],
   },
-  {
-    heading: 'Analysis',
-    items: [
-      { to: '/preparation', label: 'Preparation' },
-      { to: '/strength-map', label: 'Strength Map' },
-    ],
-  },
-  { heading: 'Glossary', to: '/glossary', items: [] },
+  { headingKey: 'nav.glossary', to: '/app/glossary', items: [] },
+  { headingKey: 'nav.settings', to: '/app/settings', items: [] },
 ];
 
 function topLinkStyle(active: boolean) {
@@ -47,13 +43,25 @@ function topLinkStyle(active: boolean) {
     padding: '8px 12px',
     borderRadius: 6,
     font: "500 13px/1 'Inter', sans-serif",
-    color: active ? 'var(--text-strong)' : '#a8a8aa',
-    background: active ? '#1f1f21' : 'transparent',
+    color: active ? 'var(--text-strong)' : 'var(--nav-inactive)',
+    background: active ? 'var(--hover-bg)' : 'transparent',
     whiteSpace: 'nowrap' as const,
   };
 }
 
-function NavGroupMenu({ group, open, onToggle, onClose }: { group: NavGroup; open: boolean; onToggle: () => void; onClose: () => void }) {
+function NavGroupMenu({
+  group,
+  open,
+  onToggle,
+  onClose,
+  t,
+}: {
+  group: NavGroup;
+  open: boolean;
+  onToggle: () => void;
+  onClose: () => void;
+  t: (key: string) => string;
+}) {
   const location = useLocation();
   const active = group.items.some((item) => location.pathname === item.to);
 
@@ -64,12 +72,12 @@ function NavGroupMenu({ group, open, onToggle, onClose }: { group: NavGroup; ope
         style={{
           ...topLinkStyle(active || open),
           border: 'none',
-          background: active || open ? '#1f1f21' : 'transparent',
+          background: active || open ? 'var(--hover-bg)' : 'transparent',
           cursor: 'pointer',
         }}
       >
-        {group.heading}
-        <span style={{ fontSize: 9, marginTop: 1, color: '#6e6e70' }}>{open ? '▲' : '▼'}</span>
+        {t(group.headingKey)}
+        <span style={{ fontSize: 9, marginTop: 1, color: 'var(--text-dim)' }}>{open ? '▲' : '▼'}</span>
       </button>
 
       {open && (
@@ -102,12 +110,12 @@ function NavGroupMenu({ group, open, onToggle, onClose }: { group: NavGroup; ope
                 padding: '8px 10px',
                 borderRadius: 6,
                 font: "500 13px/1 'Inter', sans-serif",
-                color: isActive ? 'var(--text-strong)' : '#a8a8aa',
-                background: isActive ? '#262627' : 'transparent',
+                color: isActive ? 'var(--text-strong)' : 'var(--nav-inactive)',
+                background: isActive ? 'var(--hover-bg)' : 'transparent',
               })}
             >
               <span style={{ width: 5, height: 5, borderRadius: '50%', background: 'var(--accent)', flex: 'none', opacity: 0.9 }} />
-              {item.label}
+              {t(item.labelKey)}
             </NavLink>
           ))}
         </div>
@@ -118,6 +126,7 @@ function NavGroupMenu({ group, open, onToggle, onClose }: { group: NavGroup; ope
 
 export default function Layout() {
   const { user, logout } = useAuth();
+  const { t } = useLanguage();
   const location = useLocation();
   const [openGroup, setOpenGroup] = useState<string | null>(null);
   const navRef = useRef<HTMLElement>(null);
@@ -157,7 +166,18 @@ export default function Layout() {
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', rowGap: 8 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingRight: 20, marginRight: 4, borderRight: '1px solid var(--border)' }}>
+          <Link
+            to="/"
+            title="Daily Fitness — home"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              paddingRight: 20,
+              marginRight: 4,
+              borderRight: '1px solid var(--border)',
+            }}
+          >
             <div style={{ width: 8, height: 8, borderRadius: 2, background: 'var(--accent)' }} />
             <span
               style={{
@@ -167,28 +187,30 @@ export default function Layout() {
                 textTransform: 'uppercase',
               }}
             >
-              Daily Fitness
+              {t('nav.brand')}
             </span>
-          </div>
+          </Link>
 
           {NAV_GROUPS.map((group) =>
             group.to ? (
-              <NavLink key={group.heading} to={group.to} end style={({ isActive }) => topLinkStyle(isActive)}>
-                {group.heading}
+              <NavLink key={group.headingKey} to={group.to} end style={({ isActive }) => topLinkStyle(isActive)}>
+                {t(group.headingKey)}
               </NavLink>
             ) : (
               <NavGroupMenu
-                key={group.heading}
+                key={group.headingKey}
                 group={group}
-                open={openGroup === group.heading}
-                onToggle={() => setOpenGroup(openGroup === group.heading ? null : group.heading)}
+                open={openGroup === group.headingKey}
+                onToggle={() => setOpenGroup(openGroup === group.headingKey ? null : group.headingKey)}
                 onClose={() => setOpenGroup(null)}
+                t={t}
               />
             ),
           )}
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <QuickPreferences />
           <span style={{ font: "400 11px/1.4 'Inter', sans-serif", color: 'var(--text-dim)' }}>{user?.email}</span>
           <a
             href="#"
@@ -198,7 +220,7 @@ export default function Layout() {
             }}
             style={{ font: "400 12px/1 'Inter', sans-serif", color: 'var(--text-dim)' }}
           >
-            Log out
+            {t('nav.logout')}
           </a>
         </div>
       </header>
