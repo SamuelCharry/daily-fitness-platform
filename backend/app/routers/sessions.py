@@ -1,14 +1,17 @@
+from ..timekeeping import today as local_today
 from datetime import date, datetime, timedelta, timezone
 from typing import Optional
+from threading import Lock
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from ..auth import get_current_user, get_db
 from ..models import Routine, User, Workout, WorkoutExercise, WorkoutSession, SetLog
 
 router = APIRouter(prefix="/api/sessions", tags=["sessions"])
+_session_start_lock = Lock()
 
 
 class StartSessionBody(BaseModel):
@@ -17,10 +20,10 @@ class StartSessionBody(BaseModel):
 
 class SetLogBody(BaseModel):
     workout_exercise_id: int
-    set_number: int
-    weight: Optional[float] = None
-    reps: Optional[int] = None
-    rir: Optional[int] = None
+    set_number: int = Field(ge=1, le=100)
+    weight: Optional[float] = Field(default=None, ge=0, le=2000)
+    reps: Optional[int] = Field(default=None, ge=1, le=1000)
+    rir: Optional[int] = Field(default=None, ge=0, le=10)
 
 
 def _get_owned_session(session_id: int, user: User, db: Session) -> WorkoutSession:
@@ -61,7 +64,7 @@ def _serialize_session(session: WorkoutSession):
 def list_sessions(
     days: int = 180, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
 ):
-    since = date.today() - timedelta(days=days)
+    since = local_today() - timedelta(days=days)
     sessions = (
         db.query(WorkoutSession)
         .join(Workout)
@@ -119,11 +122,20 @@ def start_session(
     if workout is None:
         raise HTTPException(status_code=404, detail="Workout not found")
 
-    session = WorkoutSession(workout_id=workout.id, date=date.today())
-    db.add(session)
-    db.commit()
-    db.refresh(session)
-    return _serialize_session(session)
+    with _session_start_lock:
+        # Resume today's unfinished workout; reopening the screen is not a new session.
+        existing = db.query(WorkoutSession).filter(
+            WorkoutSession.workout_id == workout.id,
+            WorkoutSession.date == local_today(),
+            WorkoutSession.finished_at.is_(None),
+        ).order_by(WorkoutSession.id.desc()).first()
+        if existing:
+            return _serialize_session(existing)
+        session = WorkoutSession(workout_id=workout.id, date=local_today())
+        db.add(session)
+        db.commit()
+        db.refresh(session)
+        return _serialize_session(session)
 
 
 @router.post("/{session_id}/sets")
@@ -134,6 +146,8 @@ def log_set(
     db: Session = Depends(get_db),
 ):
     session = _get_owned_session(session_id, current_user, db)
+    if session.finished_at:
+        raise HTTPException(status_code=409, detail="La sesión ya está finalizada")
 
     workout_exercise = (
         db.query(WorkoutExercise)
@@ -143,15 +157,15 @@ def log_set(
     if workout_exercise is None:
         raise HTTPException(status_code=400, detail="Exercise does not belong to this session's workout")
 
-    set_log = SetLog(
-        session_id=session.id,
-        workout_exercise_id=body.workout_exercise_id,
-        set_number=body.set_number,
-        weight=body.weight,
-        reps=body.reps,
-        rir=body.rir,
-    )
-    db.add(set_log)
+    set_log = db.query(SetLog).filter(
+        SetLog.session_id == session.id,
+        SetLog.workout_exercise_id == body.workout_exercise_id,
+        SetLog.set_number == body.set_number,
+    ).first()
+    if set_log is None:
+        set_log = SetLog(session_id=session.id, workout_exercise_id=body.workout_exercise_id, set_number=body.set_number)
+        db.add(set_log)
+    set_log.weight, set_log.reps, set_log.rir = body.weight, body.reps, body.rir
     db.commit()
     db.refresh(session)
     return _serialize_session(session)

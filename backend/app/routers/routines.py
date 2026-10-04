@@ -1,3 +1,4 @@
+from ..timekeeping import today as local_today
 from datetime import date
 from typing import List, Optional
 
@@ -277,7 +278,7 @@ def workout_today(current_user: User = Depends(get_current_user), db: Session = 
     if not workouts:
         raise HTTPException(status_code=404, detail="Active routine has no workouts yet.")
 
-    today_index = date.today().toordinal() % len(workouts)
+    today_index = local_today().toordinal() % len(workouts)
     workout = workouts[today_index]
 
     return {

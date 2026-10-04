@@ -4,7 +4,6 @@ import { AuthProvider, useAuth } from './auth/AuthContext';
 import { ThemeProvider } from './theme/ThemeContext';
 import { LanguageProvider } from './i18n/LanguageContext';
 import Layout from './components/Layout';
-import Landing from './pages/Landing';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Routines from './pages/Routines';
@@ -16,6 +15,7 @@ import Glossary from './pages/Glossary';
 import History from './pages/History';
 import ExerciseProgress from './pages/ExerciseProgress';
 import Settings from './pages/Settings';
+import Preparation from './pages/Preparation';
 
 function RequireAuth({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth();
@@ -38,7 +38,7 @@ export default function App() {
         <LanguageProvider>
           <AuthProvider>
             <Routes>
-              <Route path="/" element={<Landing />} />
+              <Route path="/" element={<Navigate to="/app" replace />} />
               <Route
                 path="/glossary"
                 element={
@@ -59,7 +59,7 @@ export default function App() {
                 path="/app/session/:workoutId"
                 element={
                   <RequireAuth>
-                    <div style={{ padding: '32px 44px', maxWidth: 900 }}>
+                    <div className="session-page">
                       <Session />
                     </div>
                   </RequireAuth>
@@ -81,6 +81,7 @@ export default function App() {
                 <Route path="/app/glossary" element={<Glossary />} />
                 <Route path="/app/history" element={<History />} />
                 <Route path="/app/settings" element={<Settings />} />
+                <Route path="/app/preparation" element={<Preparation />} />
               </Route>
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>

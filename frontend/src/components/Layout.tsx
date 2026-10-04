@@ -1,244 +1,48 @@
-import { useEffect, useRef, useState } from 'react';
-import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
+import { Link, NavLink, Outlet } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
-import { useLanguage } from '../i18n/LanguageContext';
-import QuickPreferences from '../components/QuickPreferences';
+import { useTheme } from '../theme/ThemeContext';
 
-interface NavItem {
-  to: string;
-  labelKey: string;
-}
+const navigation = [
+  ['/app', 'Mi resumen', 'overview'],
+  ['/app/daily-log', 'Bitácora diaria', 'table'],
+  ['/app/routines', 'Entrenamientos', 'training'],
+  ['/app/preparation', 'Preparación', 'target'],
+  ['/app/history', 'Historial', 'history'],
+] as const;
 
-interface NavGroup {
-  headingKey: string;
-  to?: string;
-  items: NavItem[];
-}
-
-const NAV_GROUPS: NavGroup[] = [
-  { headingKey: 'nav.dashboard', to: '/app', items: [] },
-  {
-    headingKey: 'nav.training',
-    items: [
-      { to: '/app/routines', labelKey: 'nav.routines' },
-      { to: '/app/exercises', labelKey: 'nav.exercises' },
-    ],
-  },
-  {
-    headingKey: 'nav.tracking',
-    items: [
-      { to: '/app/daily-log', labelKey: 'nav.dailyLog' },
-      { to: '/app/history', labelKey: 'nav.history' },
-    ],
-  },
-  { headingKey: 'nav.glossary', to: '/app/glossary', items: [] },
-  { headingKey: 'nav.settings', to: '/app/settings', items: [] },
-];
-
-function topLinkStyle(active: boolean) {
-  return {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 6,
-    padding: '8px 12px',
-    borderRadius: 6,
-    font: "500 13px/1 'Inter', sans-serif",
-    color: active ? 'var(--text-strong)' : 'var(--nav-inactive)',
-    background: active ? 'var(--hover-bg)' : 'transparent',
-    whiteSpace: 'nowrap' as const,
+export function Icon({ name }: { name: string }) {
+  const paths: Record<string, string> = {
+    overview: 'M3 3h7v7H3z M14 3h7v7h-7z M3 14h7v7H3z M14 14h7v7h-7z',
+    table: 'M3 4h18v16H3z M3 9h18 M3 14h18 M9 4v16 M15 4v16',
+    training: 'M7 5v14 M3 8v8 M17 5v14 M21 8v8 M7 12h10',
+    target: 'M12 3a9 9 0 1 0 9 9 M12 7a5 5 0 1 0 5 5 M12 12l8-8 M16 4h4v4',
+    history: 'M3 11a9 9 0 1 1 2 7 M3 4v7h7 M12 7v5l3 2',
+    settings: 'M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8 M12 2v3 M12 19v3 M2 12h3 M19 12h3 M5 5l2 2 M17 17l2 2 M5 19l2-2 M17 7l2-2',
+    sun: 'M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8 M12 2v2 M12 20v2 M2 12h2 M20 12h2 M5 5l1.5 1.5 M17.5 17.5L19 19 M5 19l1.5-1.5 M17.5 6.5L19 5',
   };
-}
-
-function NavGroupMenu({
-  group,
-  open,
-  onToggle,
-  onClose,
-  t,
-}: {
-  group: NavGroup;
-  open: boolean;
-  onToggle: () => void;
-  onClose: () => void;
-  t: (key: string) => string;
-}) {
-  const location = useLocation();
-  const active = group.items.some((item) => location.pathname === item.to);
-
-  return (
-    <div style={{ position: 'relative' }}>
-      <button
-        onClick={onToggle}
-        style={{
-          ...topLinkStyle(active || open),
-          border: 'none',
-          background: active || open ? 'var(--hover-bg)' : 'transparent',
-          cursor: 'pointer',
-        }}
-      >
-        {t(group.headingKey)}
-        <span style={{ fontSize: 9, marginTop: 1, color: 'var(--text-dim)' }}>{open ? '▲' : '▼'}</span>
-      </button>
-
-      {open && (
-        <div
-          style={{
-            position: 'absolute',
-            top: '110%',
-            left: 0,
-            minWidth: 180,
-            background: 'var(--bg-alt)',
-            border: '1px solid var(--border)',
-            borderRadius: 8,
-            padding: 6,
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 2,
-            boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
-            zIndex: 20,
-          }}
-        >
-          {group.items.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              onClick={onClose}
-              style={({ isActive }) => ({
-                display: 'flex',
-                alignItems: 'center',
-                gap: 8,
-                padding: '8px 10px',
-                borderRadius: 6,
-                font: "500 13px/1 'Inter', sans-serif",
-                color: isActive ? 'var(--text-strong)' : 'var(--nav-inactive)',
-                background: isActive ? 'var(--hover-bg)' : 'transparent',
-              })}
-            >
-              <span style={{ width: 5, height: 5, borderRadius: '50%', background: 'var(--accent)', flex: 'none', opacity: 0.9 }} />
-              {t(item.labelKey)}
-            </NavLink>
-          ))}
-        </div>
-      )}
-    </div>
-  );
+  return <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={paths[name] || paths.overview} /></svg>;
 }
 
 export default function Layout() {
-  const { user, logout } = useAuth();
-  const { t } = useLanguage();
-  const location = useLocation();
-  const [openGroup, setOpenGroup] = useState<string | null>(null);
-  const navRef = useRef<HTMLElement>(null);
-
-  useEffect(() => {
-    setOpenGroup(null);
-  }, [location.pathname]);
-
-  useEffect(() => {
-    function onDocClick(e: MouseEvent) {
-      if (navRef.current && !navRef.current.contains(e.target as Node)) {
-        setOpenGroup(null);
-      }
-    }
-    document.addEventListener('mousedown', onDocClick);
-    return () => document.removeEventListener('mousedown', onDocClick);
-  }, []);
-
+  const { personalMode, logout } = useAuth();
+  const { mode, setMode } = useTheme();
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: 'var(--bg)' }}>
-      <header
-        ref={navRef}
-        style={{
-          position: 'sticky',
-          top: 0,
-          zIndex: 10,
-          borderBottom: '1px solid var(--border)',
-          background: 'var(--bg-alt)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: '10px 28px',
-          minHeight: 56,
-          flex: 'none',
-          flexWrap: 'wrap',
-          rowGap: 8,
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', rowGap: 8 }}>
-          <Link
-            to="/"
-            title="Daily Fitness — home"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 8,
-              paddingRight: 20,
-              marginRight: 4,
-              borderRight: '1px solid var(--border)',
-            }}
-          >
-            <div style={{ width: 8, height: 8, borderRadius: 2, background: 'var(--accent)' }} />
-            <span
-              style={{
-                font: "600 12px/1 'Inter Tight', sans-serif",
-                letterSpacing: '.06em',
-                color: 'var(--text-strong)',
-                textTransform: 'uppercase',
-              }}
-            >
-              {t('nav.brand')}
-            </span>
-          </Link>
-
-          {NAV_GROUPS.map((group) =>
-            group.to ? (
-              <NavLink key={group.headingKey} to={group.to} end style={({ isActive }) => topLinkStyle(isActive)}>
-                {t(group.headingKey)}
-              </NavLink>
-            ) : (
-              <NavGroupMenu
-                key={group.headingKey}
-                group={group}
-                open={openGroup === group.headingKey}
-                onToggle={() => setOpenGroup(openGroup === group.headingKey ? null : group.headingKey)}
-                onClose={() => setOpenGroup(null)}
-                t={t}
-              />
-            ),
-          )}
+    <div className="app-shell">
+      <aside className="sidebar">
+        <Link className="brand" to="/app"><span className="brand-symbol"><Icon name="sun" /></span><span>cool for<br /><strong>the summer</strong></span></Link>
+        <p className="sidebar-caption">Tu constancia, en perspectiva.</p>
+        <nav aria-label="Navegación principal">{navigation.map(([to, label, icon]) => <NavLink end={to === '/app'} key={to} to={to} className={({ isActive }) => `nav-item ${isActive ? 'selected' : ''}`}><Icon name={icon} /><span>{label}</span></NavLink>)}</nav>
+        <div className="sidebar-bottom">
+          <NavLink to="/app/exercises" className="nav-item"><Icon name="training" />Biblioteca de ejercicios</NavLink>
+          <NavLink to="/app/settings" className="nav-item"><Icon name="settings" />Preferencias</NavLink>
+          <div className="personal-label"><span className="status-dot" /> Espacio personal · Natural</div>
         </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <QuickPreferences />
-          <span style={{ font: "400 11px/1.4 'Inter', sans-serif", color: 'var(--text-dim)' }}>{user?.email}</span>
-          <a
-            href="#"
-            onClick={(e) => {
-              e.preventDefault();
-              logout();
-            }}
-            style={{ font: "400 12px/1 'Inter', sans-serif", color: 'var(--text-dim)' }}
-          >
-            {t('nav.logout')}
-          </a>
-        </div>
-      </header>
-
-      <main
-        style={{
-          padding: '32px 44px 56px',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 32,
-          maxWidth: 1320,
-          width: '100%',
-          margin: '0 auto',
-          overflowY: 'auto',
-        }}
-      >
-        <Outlet />
-      </main>
+      </aside>
+      <div className="workspace">
+        <header className="workspace-header"><span>Un día a la vez.</span><div><button className="quiet-button" onClick={() => setMode(mode === 'dark' ? 'light' : 'dark')} aria-label="Cambiar entre tema claro y oscuro"><Icon name="sun" /></button>{!personalMode && <button className="quiet-button" onClick={logout}>Salir</button>}<Link className="user-avatar" to="/app/settings" aria-label="Abrir mi espacio y preferencias">Yo</Link></div></header>
+        <main className="workspace-main"><Outlet /></main>
+        <footer className="workspace-footer">Cool for the Summer <span>Hecho para el trabajo de cada día.</span></footer>
+      </div>
     </div>
   );
 }

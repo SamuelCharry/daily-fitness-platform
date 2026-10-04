@@ -9,6 +9,7 @@ interface Me {
 interface AuthContextValue {
   user: Me | null;
   loading: boolean;
+  personalMode: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string) => Promise<void>;
   logout: () => void;
@@ -19,15 +20,15 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<Me | null>(null);
   const [loading, setLoading] = useState(true);
+  const [personalMode, setPersonalMode] = useState(false);
 
   useEffect(() => {
-    if (!getToken()) {
-      setLoading(false);
-      return;
-    }
     api
-      .get<Me>('/api/auth/me')
-      .then(setUser)
+      .get<{ personal_mode: boolean }>('/api/auth/config')
+      .then(async (config) => {
+        setPersonalMode(config.personal_mode);
+        if (config.personal_mode || getToken()) setUser(await api.get<Me>('/api/auth/me'));
+      })
       .catch(() => clearToken())
       .finally(() => setLoading(false));
   }, []);
@@ -36,6 +37,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     () => ({
       user,
       loading,
+      personalMode,
       login: async (email, password) => {
         const { access_token } = await apiLogin(email, password);
         setToken(access_token);
@@ -53,7 +55,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(null);
       },
     }),
-    [user, loading],
+    [user, loading, personalMode],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

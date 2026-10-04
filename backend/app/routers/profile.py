@@ -2,7 +2,7 @@ from datetime import date
 from typing import Optional
 
 from fastapi import APIRouter, Depends
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from ..auth import get_current_user, get_db
@@ -17,6 +17,12 @@ class ProfileBody(BaseModel):
     birthdate: Optional[date] = None
     current_phase: Optional[str] = None  # "cut" | "maintain" | "bulk"
     phase_start_date: Optional[date] = None
+    competition_date: Optional[date] = None
+    goal_weight: Optional[float] = Field(default=None, gt=0, le=500)
+    target_calories: Optional[int] = Field(default=None, gt=0, le=20000)
+    target_protein: Optional[float] = Field(default=None, ge=0, le=1000)
+    weekly_sessions: Optional[int] = Field(default=None, ge=1, le=14)
+    preparation_notes: Optional[str] = Field(default=None, max_length=5000)
 
 
 def _serialize(profile: Optional[UserProfile]):
@@ -28,6 +34,12 @@ def _serialize(profile: Optional[UserProfile]):
         "birthdate": profile.birthdate,
         "current_phase": profile.current_phase,
         "phase_start_date": profile.phase_start_date,
+        "competition_date": profile.competition_date,
+        "goal_weight": profile.goal_weight,
+        "target_calories": profile.target_calories,
+        "target_protein": profile.target_protein,
+        "weekly_sessions": profile.weekly_sessions,
+        "preparation_notes": profile.preparation_notes,
     }
 
 

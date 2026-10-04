@@ -1,3 +1,4 @@
+from ..timekeeping import today as local_today
 import math
 from datetime import date, timedelta
 from typing import Optional
@@ -68,7 +69,7 @@ def _ffmi(weight_kg: float, height_cm: float, body_fat_pct: Optional[float]) -> 
 def _age_from_birthdate(birthdate) -> Optional[int]:
     if not birthdate:
         return None
-    today = date.today()
+    today = local_today()
     return today.year - birthdate.year - ((today.month, today.day) < (birthdate.month, birthdate.day))
 
 
@@ -83,7 +84,7 @@ def get_dashboard(current_user: User = Depends(get_current_user), db: Session = 
         .first()
     )
 
-    since = date.today() - timedelta(weeks=8)
+    since = local_today() - timedelta(weeks=8)
     trend = (
         db.query(BodyStat)
         .filter(BodyStat.user_id == current_user.id, BodyStat.date >= since, BodyStat.weight.isnot(None))
@@ -111,7 +112,7 @@ def get_dashboard(current_user: User = Depends(get_current_user), db: Session = 
         body_fat_methods["inbody"] = latest.body_fat_manual
 
     # Adherence: % of the last 14 days that have a logged body stat entry.
-    two_weeks_ago = date.today() - timedelta(days=14)
+    two_weeks_ago = local_today() - timedelta(days=14)
     logged_days = (
         db.query(BodyStat)
         .filter(BodyStat.user_id == current_user.id, BodyStat.date >= two_weeks_ago)
@@ -131,7 +132,7 @@ def get_dashboard(current_user: User = Depends(get_current_user), db: Session = 
             .all()
         )
         if workouts:
-            idx = date.today().toordinal() % len(workouts)
+            idx = local_today().toordinal() % len(workouts)
             w = workouts[idx]
             today_workout = {
                 "id": w.id,
@@ -188,7 +189,7 @@ def _trend_arrow(this_week: float, last_week: float) -> str:
 
 
 def _performance_trends(user: User, db: Session):
-    today = date.today()
+    today = local_today()
     this_week_start = today - timedelta(days=7)
     last_week_start = today - timedelta(days=14)
 

@@ -1,8 +1,9 @@
+from ..timekeeping import today as local_today
 from datetime import date, timedelta
 from typing import Optional
 
-from fastapi import APIRouter, Depends
-from pydantic import BaseModel
+from fastapi import APIRouter, Depends, Query
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from ..auth import get_current_user, get_db
@@ -13,18 +14,18 @@ router = APIRouter(prefix="/api/body-stats", tags=["body-stats"])
 
 class BodyStatBody(BaseModel):
     date: date
-    weight: Optional[float] = None
+    weight: Optional[float] = Field(default=None, gt=0, le=500)
     waist: Optional[float] = None
     neck: Optional[float] = None
     hip: Optional[float] = None
-    body_fat_manual: Optional[float] = None
-    calories: Optional[float] = None
-    protein_g: Optional[float] = None
-    carbs_g: Optional[float] = None
-    fat_g: Optional[float] = None
-    steps: Optional[int] = None
-    sleep_minutes: Optional[int] = None
-    cardio_minutes: Optional[int] = None
+    body_fat_manual: Optional[float] = Field(default=None, gt=0, lt=100)
+    calories: Optional[float] = Field(default=None, ge=0, le=20000)
+    protein_g: Optional[float] = Field(default=None, ge=0, le=2000)
+    carbs_g: Optional[float] = Field(default=None, ge=0, le=5000)
+    fat_g: Optional[float] = Field(default=None, ge=0, le=2000)
+    steps: Optional[int] = Field(default=None, ge=0, le=200000)
+    sleep_minutes: Optional[int] = Field(default=None, ge=0, le=1440)
+    cardio_minutes: Optional[int] = Field(default=None, ge=0, le=1440)
     on_diet: Optional[bool] = None
     cheat_meal: Optional[bool] = None
     notes: Optional[str] = None
@@ -75,9 +76,9 @@ def upsert_body_stat(
 
 @router.get("")
 def list_body_stats(
-    days: int = 56, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
+    days: int = Query(default=56, ge=1, le=36500), current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
 ):
-    since = date.today() - timedelta(days=days)
+    since = local_today() - timedelta(days=days)
     stats = (
         db.query(BodyStat)
         .filter(BodyStat.user_id == current_user.id, BodyStat.date >= since)

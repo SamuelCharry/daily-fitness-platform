@@ -18,7 +18,7 @@ function readStoredMode(): ThemeMode {
   } catch {
     // ignore
   }
-  return 'system';
+  return 'light';
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {

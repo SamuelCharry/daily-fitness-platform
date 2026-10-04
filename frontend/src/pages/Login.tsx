@@ -1,125 +1,19 @@
 import { useState, type FormEvent } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
-import { ApiError } from '../api';
-import { useLanguage } from '../i18n/LanguageContext';
-import QuickPreferences from '../components/QuickPreferences';
-
+import { Icon } from '../components/Layout';
 export default function Login() {
-  const { login, register } = useAuth();
-  const { t } = useLanguage();
+  const { login } = useAuth();
   const navigate = useNavigate();
-  const [mode, setMode] = useState<'login' | 'register'>('login');
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(localStorage.getItem('cfts_owner_email') || '');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
-
-  async function onSubmit(e: FormEvent) {
-    e.preventDefault();
-    setError(null);
-    setBusy(true);
-    try {
-      if (mode === 'login') await login(email, password);
-      else await register(email, password);
-      navigate('/app', { replace: true });
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Something went wrong');
-    } finally {
-      setBusy(false);
-    }
+  async function submit(e: FormEvent) {
+    e.preventDefault(); setBusy(true); setError('');
+    try { await login(email, password); localStorage.setItem('cfts_owner_email', email); navigate('/app', { replace: true }); }
+    catch { setError('No se pudo entrar. Revisa tus datos y la conexión e intenta de nuevo.'); }
+    finally { setBusy(false); }
   }
-
-  return (
-    <div
-      style={{
-        minHeight: '100vh',
-        display: 'flex',
-        flexDirection: 'column',
-        background:
-          'radial-gradient(120% 120% at 50% -10%, #3a0508 0%, #170303 45%, #060606 100%)',
-      }}
-    >
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '18px 28px' }}>
-        <Link to="/" style={{ font: "400 12px/1 'Inter', sans-serif", color: 'var(--text-dim)' }}>
-          {t('login.backToHome')}
-        </Link>
-        <QuickPreferences />
-      </div>
-
-      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <form onSubmit={onSubmit} style={{ width: 400, display: 'flex', flexDirection: 'column', gap: 32 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <div style={{ width: 8, height: 8, borderRadius: 2, background: 'var(--accent)' }} />
-            <span
-              style={{
-                font: "600 13px/1 'Inter Tight', sans-serif",
-                letterSpacing: '.06em',
-                color: 'var(--text-strong)',
-                textTransform: 'uppercase',
-              }}
-            >
-              {t('nav.brand')}
-            </span>
-          </div>
-          <h1
-            style={{
-              margin: 0,
-              font: "500 32px/1.25 'Inter Tight', sans-serif",
-              color: 'var(--text-strong)',
-              letterSpacing: '-0.01em',
-            }}
-          >
-            {t('login.title1')}
-            <br />
-            {t('login.title2')}
-            <br />
-            {t('login.title3')}
-          </h1>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-            <label className="field">
-              <span className="label">{t('login.email')}</span>
-              <input
-                type="email"
-                placeholder="you@domain.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                autoFocus
-              />
-            </label>
-            <label className="field">
-              <span className="label">{t('login.password')}</span>
-              <input
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                minLength={mode === 'register' ? 8 : undefined}
-              />
-            </label>
-
-            {error && <span className="error-text">{error}</span>}
-
-            <button type="submit" className="btn-primary" style={{ marginTop: 6 }} disabled={busy}>
-              {busy ? t('login.pleaseWait') : mode === 'login' ? t('login.submitLogin') : t('login.submitRegister')}
-            </button>
-            <a
-              href="#"
-              onClick={(e) => {
-                e.preventDefault();
-                setError(null);
-                setMode(mode === 'login' ? 'register' : 'login');
-              }}
-              style={{ alignSelf: 'center', font: "400 12px/1 'Inter', sans-serif", color: 'var(--text-dim)' }}
-            >
-              {mode === 'login' ? t('login.switchToRegister') : t('login.switchToLogin')}
-            </a>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
+  return <main className="login-page"><form className="login-form" onSubmit={submit}><div className="brand"><span className="brand-symbol"><Icon name="sun" /></span><span>cool for<br /><strong>the summer</strong></span></div><h1>Tu espacio. Tu progreso.</h1><p>Entra a tu bitácora personal. Recordaremos tu sesión en este dispositivo durante siete días.</p><label className="field"><span>Correo de tu cuenta</span><input type="email" autoComplete="username" value={email} required onChange={e => setEmail(e.target.value)} /></label><label className="field"><span>Contraseña</span><input type="password" autoComplete="current-password" value={password} required onChange={e => setPassword(e.target.value)} /></label>{error && <p className="error-text" role="alert">{error}</p>}<button className="btn-primary" disabled={busy}>{busy ? 'Entrando…' : 'Entrar a mi bitácora'}</button><p className="helper-text">Una plataforma personal para entrenar, registrar y seguir adelante.</p></form></main>;
 }

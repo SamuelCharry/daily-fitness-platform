@@ -27,6 +27,12 @@ class UserProfile(Base):
     birthdate = Column(Date)
     current_phase = Column(String, default="maintain")  # "cut" | "maintain" | "bulk"
     phase_start_date = Column(Date)
+    competition_date = Column(Date)
+    goal_weight = Column(Float)
+    target_calories = Column(Integer)
+    target_protein = Column(Float)
+    weekly_sessions = Column(Integer)
+    preparation_notes = Column(String)
 
     user = relationship("User", back_populates="profile")
 

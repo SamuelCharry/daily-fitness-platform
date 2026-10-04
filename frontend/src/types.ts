@@ -48,6 +48,12 @@ export interface StrengthMapData {
 }
 
 export interface Profile {
+  competition_date?: string | null;
+  goal_weight?: number | null;
+  target_calories?: number | null;
+  target_protein?: number | null;
+  weekly_sessions?: number | null;
+  preparation_notes?: string | null;
   height_cm: number | null;
   sex: string | null;
   birthdate: string | null;

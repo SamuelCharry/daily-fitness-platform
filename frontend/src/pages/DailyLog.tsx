@@ -1,179 +1,107 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { api } from '../api';
 import { useApi } from '../hooks/useApi';
+import { useAuth } from '../auth/AuthContext';
 import type { BodyStat } from '../types';
-import { useLanguage } from '../i18n/LanguageContext';
+import { displayDate, downloadCSV, localDate, shiftDate } from '../utils/journal';
 
-const today = new Date().toISOString().slice(0, 10);
-
-type FormState = {
-  weight: string;
-  waist: string;
-  neck: string;
-  hip: string;
-  body_fat_manual: string;
-  calories: string;
-  protein_g: string;
-  carbs_g: string;
-  fat_g: string;
-  sleep_minutes: string;
-  steps: string;
-  cardio_minutes: string;
-  notes: string;
-};
-
-const EMPTY: FormState = {
-  weight: '',
-  waist: '',
-  neck: '',
-  hip: '',
-  body_fat_manual: '',
-  calories: '',
-  protein_g: '',
-  carbs_g: '',
-  fat_g: '',
-  sleep_minutes: '',
-  steps: '',
-  cardio_minutes: '',
-  notes: '',
-};
-
-function toForm(stat: BodyStat | undefined): FormState {
-  if (!stat) return EMPTY;
-  const f: Record<string, string> = {};
-  (Object.keys(EMPTY) as (keyof FormState)[]).forEach((k) => {
-    const v = (stat as unknown as Record<string, unknown>)[k];
-    f[k] = v == null ? '' : String(v);
-  });
-  return f as unknown as FormState;
-}
+type Column = { key: keyof BodyStat; label: string; max?: number; integer?: boolean };
+const columns: Column[] = [
+  { key: 'weight', label: 'Peso · kg', max: 500 },
+  { key: 'calories', label: 'Energía · kcal', max: 20000 },
+  { key: 'protein_g', label: 'Proteína · g', max: 2000 },
+  { key: 'carbs_g', label: 'Carbos · g', max: 5000 },
+  { key: 'fat_g', label: 'Grasas · g', max: 2000 },
+  { key: 'steps', label: 'Pasos', max: 200000, integer: true },
+  { key: 'sleep_minutes', label: 'Sueño · min', max: 1440, integer: true },
+  { key: 'cardio_minutes', label: 'Cardio · min', max: 1440, integer: true },
+  { key: 'waist', label: 'Cintura · cm', max: 500 },
+  { key: 'neck', label: 'Cuello · cm', max: 500 },
+  { key: 'hip', label: 'Cadera · cm', max: 500 },
+  { key: 'body_fat_manual', label: 'Grasa · %', max: 99.9 },
+  { key: 'notes', label: 'Notas' },
+];
 
 export default function DailyLog() {
-  const { t } = useLanguage();
-  const { data: recent, loading, reload } = useApi(() => api.get<BodyStat[]>('/api/body-stats?days=1'));
-  const [form, setForm] = useState<FormState>(EMPTY);
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
-
+  const { user } = useAuth();
+  const storageKey = `cfts-journal-drafts-${user?.id}`;
+  const { data, error, loading, reload } = useApi(() => api.get<BodyStat[]>('/api/body-stats?days=36500'));
+  const [end, setEnd] = useState(localDate());
+  const [length, setLength] = useState(14);
+  const [drafts, setDrafts] = useState<Record<string, Record<string, string>>>(() => {
+    try { return JSON.parse(sessionStorage.getItem(storageKey) || '{}'); } catch { return {}; }
+  });
+  useEffect(() => { sessionStorage.setItem(storageKey, JSON.stringify(drafts)); }, [drafts, storageKey]);
+  const [saving, setSaving] = useState<string | null>(null);
+  const [message, setMessage] = useState('');
+  const dirty = Object.keys(drafts).length;
+  const currentDrafts = useRef(drafts);
+  useEffect(() => { currentDrafts.current = drafts; }, [drafts]);
   useEffect(() => {
-    const existing = recent?.find((s) => s.date === today);
-    setForm(toForm(existing));
-  }, [recent]);
-
-  function field(key: keyof FormState, label: string, type: string = 'text') {
-    return (
-      <label className="field">
-        <span className="label">{label}</span>
-        <input
-          type={type}
-          value={form[key]}
-          onChange={(e) => setForm({ ...form, [key]: e.target.value })}
-        />
-      </label>
-    );
+    const warn = (event: BeforeUnloadEvent) => { if (Object.keys(currentDrafts.current).length) event.preventDefault(); };
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, []);
+  const dates = Array.from({ length }, (_, i) => shiftDate(end, -i));
+  const records = new Map((data || []).map(s => [s.date, s]));
+  function value(date: string, key: keyof BodyStat) {
+    return drafts[date]?.[key] ?? String(records.get(date)?.[key] ?? '');
   }
-
-  const calculatedCalories =
-    form.protein_g || form.carbs_g || form.fat_g
-      ? Math.round((Number(form.protein_g) || 0) * 4 + (Number(form.carbs_g) || 0) * 4 + (Number(form.fat_g) || 0) * 9)
-      : null;
-
-  async function save() {
-    setSaving(true);
-    setSaved(false);
-    try {
-      const num = (v: string) => (v.trim() === '' ? null : Number(v));
-      await api.post('/api/body-stats', {
-        date: today,
-        weight: num(form.weight),
-        waist: num(form.waist),
-        neck: num(form.neck),
-        hip: num(form.hip),
-        body_fat_manual: num(form.body_fat_manual),
-        calories: num(form.calories),
-        protein_g: num(form.protein_g),
-        carbs_g: num(form.carbs_g),
-        fat_g: num(form.fat_g),
-        sleep_minutes: num(form.sleep_minutes),
-        steps: num(form.steps),
-        cardio_minutes: num(form.cardio_minutes),
-        notes: form.notes || null,
+  function edit(date: string, key: keyof BodyStat, text: string) {
+    setMessage('');
+    setDrafts(old => ({ ...old, [date]: { ...old[date], [key]: text } }));
+  }
+  function pasteCells(event: React.ClipboardEvent<HTMLInputElement>, row: number, column: number) {
+    const text = event.clipboardData.getData('text/plain');
+    if (!text.includes('\t') && !text.includes('\n')) return;
+    event.preventDefault();
+    const grid = text.replaceAll('\r', '').trimEnd().split('\n').map(line => line.split('\t'));
+    setDrafts(old => {
+      const next = { ...old };
+      grid.forEach((cells, dy) => {
+        const date = dates[row + dy];
+        if (!date) return;
+        next[date] = { ...next[date] };
+        cells.forEach((cell, dx) => { const col = columns[column + dx]; if (col) next[date][col.key] = cell.trim(); });
       });
-      setSaved(true);
-      reload();
-    } finally {
-      setSaving(false);
-    }
+      return next;
+    });
+    setMessage('Celdas pegadas. Revisa los valores y pulsa Guardar.');
   }
-
-  return (
-    <>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-        <span className="eyebrow">{t('pages.tracking')}</span>
-        <h1 className="page-title">
-          {t('pages.dailyLog')} —{' '}
-          {new Date(today + 'T00:00:00').toLocaleDateString(undefined, { month: 'long', day: 'numeric' })}
-        </h1>
-      </div>
-
-      {loading && <span className="spinner-text">Loading…</span>}
-
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24, maxWidth: 900 }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-          {field('weight', 'Weight (kg)', 'number')}
-          {field('waist', 'Waist (cm)', 'number')}
-          {field('neck', 'Neck (cm)', 'number')}
-          {field('hip', 'Hip (cm)', 'number')}
-          {field('body_fat_manual', 'Body fat % (InBody / manual scan)', 'number')}
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-          <label className="field">
-            <span className="label">Calories</span>
-            <input
-              type="number"
-              value={form.calories}
-              onChange={(e) => setForm({ ...form, calories: e.target.value })}
-            />
-            {calculatedCalories != null && (
-              <span style={{ font: "400 11.5px/1.4 'Inter', sans-serif", color: 'var(--text-dim)' }}>
-                ≈ {calculatedCalories} kcal from the macros below.{' '}
-                <a
-                  href="#"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    setForm((f) => ({ ...f, calories: String(calculatedCalories) }));
-                  }}
-                >
-                  Use this
-                </a>
-              </span>
-            )}
-          </label>
-          {field('protein_g', 'Protein (g)', 'number')}
-          {field('carbs_g', 'Carbs (g)', 'number')}
-          {field('fat_g', 'Fat (g)', 'number')}
-          {field('sleep_minutes', 'Sleep (minutes)', 'number')}
-          {field('steps', 'Steps', 'number')}
-          {field('cardio_minutes', 'Cardio (minutes)', 'number')}
-        </div>
-      </div>
-
-      <label className="field" style={{ maxWidth: 900 }}>
-        <span className="label">Notes</span>
-        <textarea
-          rows={3}
-          value={form.notes}
-          onChange={(e) => setForm({ ...form, notes: e.target.value })}
-          style={{ resize: 'none' }}
-        />
-      </label>
-
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        <button className="btn-primary" style={{ alignSelf: 'flex-start' }} onClick={save} disabled={saving}>
-          {saving ? 'Saving…' : 'Save'}
-        </button>
-        {saved && <span style={{ color: 'var(--text-dim)', fontSize: 12 }}>Saved.</span>}
-      </div>
-    </>
-  );
+  async function saveRow(date: string) {
+    const changes = drafts[date];
+    if (!changes) return;
+    const body: Record<string, unknown> = { date };
+    for (const [key, raw] of Object.entries(changes)) {
+      if (key === 'notes') { body[key] = raw || null; continue; }
+      const c = columns.find(col => col.key === key)!;
+      const n = raw.trim() === '' ? null : Number(raw.replace(',', '.'));
+      if (n != null && (!Number.isFinite(n) || n < 0 || (c.max != null && n > c.max) || (c.integer && !Number.isInteger(n)) || (key === 'weight' && n <= 0))) throw new Error(`${c.label}: revisa el valor del ${displayDate(date)}.`);
+      body[key] = n;
+    }
+    await api.post('/api/body-stats', body);
+    setDrafts(old => { const next = { ...old }; delete next[date]; return next; });
+  }
+  async function save(date?: string) {
+    setSaving(date || 'all'); setMessage('');
+    try {
+      for (const d of date ? [date] : Object.keys(drafts)) await saveRow(d);
+      reload(); setMessage('Guardado. Tus datos están en el servidor.');
+    } catch (err) {
+      reload(); setMessage(err instanceof Error ? err.message : 'No se pudo guardar. Intenta de nuevo.');
+    } finally { setSaving(null); }
+  }
+  function exportCSV() {
+    downloadCSV('cool-for-the-summer-bitacora.csv', [['Fecha', ...columns.map(c => c.label)], ...(data || []).map(s => [s.date, ...columns.map(c => s[c.key])])]);
+  }
+  return <>
+    <div className="page-heading"><div><h1>Bitácora diaria</h1><p>Tu hoja de siempre, con todo tu progreso conectado.</p></div><button className="btn-ghost" onClick={exportCSV} disabled={!data?.length}>Exportar CSV</button></div>
+    <div className="journal-toolbar"><div><label>Hasta <input type="date" value={end} max={localDate()} onChange={e => e.target.value && setEnd(e.target.value)} /></label><label>Mostrar <select value={length} onChange={e => setLength(Number(e.target.value))}><option value={7}>7 días</option><option value={14}>14 días</option><option value={30}>30 días</option><option value={90}>90 días</option></select></label></div><button className="btn-primary" disabled={!dirty || !!saving || loading || !!error} onClick={() => save()}>{saving ? 'Guardando…' : dirty ? `Guardar ${dirty} ${dirty === 1 ? 'fila' : 'filas'}` : 'Todo guardado'}</button></div>
+    <p className="helper-text">Escribe en una celda, avanza con Tab o pega un bloque desde Excel. Las celdas vacías no cuentan como cero. Puedes editar fechas anteriores. Desliza para ver todas las columnas.</p>
+    {error && <div className="error-banner" role="alert">No se pudo cargar la bitácora: {error} <button onClick={reload}>Reintentar</button></div>}
+    {loading && <p role="status">Cargando registros…</p>}
+    {message && <p className="save-message" role="status">{message}</p>}
+    <div className="sheet-scroll" role="region" aria-label="Registro diario editable" tabIndex={0}><table className="journal-sheet"><thead><tr><th scope="col">Fecha</th>{columns.map(c => <th scope="col" key={c.key}>{c.label}</th>)}<th scope="col">Estado</th></tr></thead><tbody>{dates.map((date, row) => <tr key={date} className={date === localDate() ? 'today-row' : ''}><th scope="row">{displayDate(date)}{date === localDate() && <small>Hoy</small>}</th>{columns.map((c, column) => <td key={c.key}><input aria-label={`${c.label}, ${date}`} inputMode={c.key === 'notes' ? 'text' : 'decimal'} value={value(date, c.key)} placeholder="—" disabled={!!saving || loading || !!error} onChange={e => edit(date, c.key, e.target.value)} onPaste={e => pasteCells(e, row, column)} /></td>)}<td>{drafts[date] ? <button className="row-save" disabled={!!saving} onClick={() => save(date)}>Guardar</button> : <span className="row-status">{records.has(date) ? 'Guardado' : 'Sin registro'}</span>}</td></tr>)}</tbody></table></div>
+    <div className="journal-foot"><span>{data?.length || 0} días registrados en total</span><span>{dirty ? `${dirty} filas pendientes de guardar` : 'Los cambios se guardan al pulsar Guardar'}</span></div>
+  </>;
 }

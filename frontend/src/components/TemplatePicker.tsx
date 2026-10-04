@@ -14,7 +14,7 @@ export default function TemplatePicker({ onCreated }: { onCreated: () => void })
 
   const templates = [...ROUTINE_TEMPLATES].sort((a, b) => a.rank - b.rank);
 
-  async function useTemplate(templateKey: (typeof ROUTINE_TEMPLATES)[number]['key']) {
+  async function createFromTemplate(templateKey: (typeof ROUTINE_TEMPLATES)[number]['key']) {
     const template = ROUTINE_TEMPLATES.find((t) => t.key === templateKey)!;
     if (!exercises) return;
     setBusyKey(templateKey);
@@ -89,7 +89,7 @@ export default function TemplatePicker({ onCreated }: { onCreated: () => void })
             </span>
             <button
               className={tpl.rank === 1 ? 'btn-primary' : 'btn-ghost'}
-              onClick={() => useTemplate(tpl.key)}
+              onClick={() => createFromTemplate(tpl.key)}
               disabled={busyKey !== null || !exercises}
               style={{ marginTop: 'auto' }}
             >

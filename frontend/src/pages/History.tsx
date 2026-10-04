@@ -1,108 +1,21 @@
+import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { api } from '../api';
 import { useApi } from '../hooks/useApi';
 import type { Routine, WorkoutSession } from '../types';
-import { computeRirBreakdown, findStalls, type ExerciseNameLookup } from '../utils/sessionAnalysis';
-import { useLanguage } from '../i18n/LanguageContext';
-
+import { displayDate, downloadCSV } from '../utils/journal';
 export default function History() {
-  const { t } = useLanguage();
-  const { data: sessions, loading: sessionsLoading, error } = useApi(() => api.get<WorkoutSession[]>('/api/sessions?days=180'));
-  const { data: routines, loading: routinesLoading } = useApi(() => api.get<Routine[]>('/api/routines'));
-
-  const loading = sessionsLoading || routinesLoading;
-
-  const lookup: ExerciseNameLookup = {};
-  routines?.forEach((r) =>
-    r.workouts.forEach((w) =>
-      w.exercises.forEach((e) => {
-        lookup[e.id] = { name: e.name, muscle: e.muscle };
-      }),
-    ),
-  );
-
-  const rir = sessions ? computeRirBreakdown(sessions) : null;
-  const stalls = sessions ? findStalls(sessions, lookup) : [];
-
-  return (
-    <>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-        <span className="eyebrow">{t('pages.tracking')}</span>
-        <h1 className="page-title">{t('pages.history')}</h1>
-      </div>
-
-      {loading && <span className="spinner-text">Loading…</span>}
-      {error && <span className="error-text">{error}</span>}
-
-      {rir && (
-        <div className="card">
-          <span className="label">Set intensity (last 180 days)</span>
-          {rir.total === 0 ? (
-            <span className="spinner-text">No sets logged yet — start a workout to build this up.</span>
-          ) : (
-            <>
-              <div style={{ display: 'flex', height: 10, borderRadius: 5, overflow: 'hidden' }}>
-                <div style={{ width: `${(rir.workingSets / rir.total) * 100}%`, background: 'var(--accent)' }} title="Working sets (0-2 RIR)" />
-                <div style={{ width: `${(rir.looseSets / rir.total) * 100}%`, background: '#4a4a4c' }} title="Loose sets (3+ RIR)" />
-                <div style={{ width: `${(rir.unrated / rir.total) * 100}%`, background: 'var(--border)' }} title="No RIR logged" />
-              </div>
-              <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
-                <span style={{ font: "400 12px/1 'Inter', sans-serif", color: 'var(--text-muted)' }}>
-                  <b style={{ color: 'var(--accent)' }}>{rir.workingPct}%</b> true working sets (0–2 RIR)
-                </span>
-                <span style={{ font: "400 12px/1 'Inter', sans-serif", color: 'var(--text-dim)' }}>{rir.looseSets} sets left too far from failure</span>
-                <span style={{ font: "400 12px/1 'Inter', sans-serif", color: 'var(--text-dim)' }}>{rir.unrated} sets with no RIR logged</span>
-              </div>
-              <p className="muted-note">
-                Only sets taken to within 0–2 reps of failure count as real working sets — see the Glossary's "Intensity
-                & RIR" entry for why that threshold matters.
-              </p>
-            </>
-          )}
-        </div>
-      )}
-
-      <div className="card">
-        <span className="label">Possible stalls</span>
-        {stalls.length === 0 ? (
-          <span className="spinner-text">
-            No exercise has gone 3 straight sessions without a new top weight or rep — nothing to flag.
-          </span>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {stalls.map((s) => (
-              <div
-                key={s.workoutExerciseId}
-                style={{ display: 'flex', flexDirection: 'column', gap: 2, paddingBottom: 10, borderBottom: '1px solid var(--border)' }}
-              >
-                <span style={{ font: "500 14px/1.2 'Inter Tight', sans-serif", color: 'var(--text-strong)' }}>{s.name}</span>
-                <span style={{ font: "400 12.5px/1.4 'Inter', sans-serif", color: 'var(--text-muted)' }}>{s.message}</span>
-              </div>
-            ))}
-            <p className="muted-note">
-              This isn't a scheduled deload prompt — it only fires when the data shows real stagnation, per the "deload
-              reactively, not proactively" principle.
-            </p>
-          </div>
-        )}
-      </div>
-
-      <div className="card">
-        <span className="label">Recent sessions</span>
-        {sessions?.length === 0 && <span className="spinner-text">No sessions logged yet.</span>}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-          {sessions?.slice(0, 20).map((s) => (
-            <div
-              key={s.id}
-              style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid var(--border)' }}
-            >
-              <span style={{ font: "500 13.5px/1 'Inter Tight', sans-serif", color: 'var(--text)' }}>{s.workout_name}</span>
-              <span style={{ font: "400 12px/1 'Inter', sans-serif", color: 'var(--text-dim)' }}>
-                {s.date} · {s.sets.length} sets{s.finished_at ? '' : ' · in progress'}
-              </span>
-            </div>
-          ))}
-        </div>
-      </div>
-    </>
-  );
+  const { data, error, loading, reload } = useApi(async () => ({ sessions: await api.get<WorkoutSession[]>('/api/sessions?days=36500'), routines: await api.get<Routine[]>('/api/routines') }));
+  const [selected, setSelected] = useState<number | null>(null);
+  const lookup = new Map(data?.routines.flatMap(r => r.workouts.flatMap(w => w.exercises.map(e => [e.id, e] as const))) || []);
+  function exportCSV() {
+    downloadCSV('cool-for-the-summer-entrenamientos.csv', [['Fecha', 'Sesión', 'Estado', 'Ejercicio', 'Serie', 'kg', 'Reps', 'RIR'], ...(data?.sessions || []).flatMap(s => s.sets.map(set => [s.date, s.workout_name, s.finished_at ? 'Finalizada' : 'Pendiente', lookup.get(set.workout_exercise_id)?.name || set.workout_exercise_id, set.set_number, set.weight, set.reps, set.rir]))]);
+  }
+  const detail = data?.sessions.find(s => s.id === selected);
+  return <>
+    <div className="page-heading"><div><h1>Cada sesión cuenta.</h1><p>Tu historial de entrenamiento, serie por serie.</p></div><button className="btn-ghost" disabled={!data?.sessions.length} onClick={exportCSV}>Exportar series CSV</button></div>
+    {loading && <p role="status">Cargando entrenamientos…</p>}{error && <div className="error-banner" role="alert">{error} <button onClick={reload}>Reintentar</button></div>}
+    <section className="panel"><div className="section-heading"><h2>Mis sesiones</h2><span className="helper-text">{data?.sessions.filter(s => s.finished_at).length || 0} completadas</span></div><div className="table-scroll"><table className="read-table"><thead><tr><th>Fecha</th><th>Entrenamiento</th><th>Series</th><th>Estado</th><th>Detalle</th></tr></thead><tbody>{data?.sessions.map(s => <tr key={s.id}><td>{displayDate(s.date)}</td><th>{s.workout_name}</th><td>{s.sets.length}</td><td>{s.finished_at ? 'Completado' : 'Pendiente'}</td><td><button className="quiet-button" onClick={() => setSelected(selected === s.id ? null : s.id)} aria-expanded={selected === s.id}>Ver series</button>{!s.finished_at && <Link to={`/app/session/${s.workout_id}`}>Entrenar</Link>}</td></tr>)}</tbody></table></div>{!loading && !data?.sessions.length && <p className="table-empty">Todavía no hay sesiones. <Link to="/app/routines">Abre tu programa y empieza.</Link></p>}</section>
+    {detail && <section className="panel"><div className="section-heading"><h2>{detail.workout_name} · {displayDate(detail.date)}</h2><button className="quiet-button" onClick={() => setSelected(null)}>Cerrar detalle</button></div><div className="table-scroll"><table className="read-table"><thead><tr><th>Ejercicio</th><th>Serie</th><th>kg</th><th>Reps</th><th>RIR</th></tr></thead><tbody>{detail.sets.map(set => <tr key={set.id}><th>{lookup.get(set.workout_exercise_id)?.name || 'Ejercicio'}</th><td>{set.set_number}</td><td>{set.weight ?? '—'}</td><td>{set.reps ?? '—'}</td><td>{set.rir ?? '—'}</td></tr>)}</tbody></table></div>{!detail.sets.length && <p className="helper-text">Esta sesión no tiene series registradas.</p>}</section>}
+  </>;
 }

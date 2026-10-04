@@ -18,7 +18,7 @@ function detectDefaultLang(): Lang {
   } catch {
     // ignore
   }
-  return typeof navigator !== 'undefined' && navigator.language?.toLowerCase().startsWith('es') ? 'es' : 'en';
+  return 'es';
 }
 
 export function LanguageProvider({ children }: { children: ReactNode }) {

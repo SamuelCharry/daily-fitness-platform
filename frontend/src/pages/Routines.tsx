@@ -3,104 +3,26 @@ import { Link } from 'react-router-dom';
 import { api } from '../api';
 import { useApi } from '../hooks/useApi';
 import type { Routine } from '../types';
-import { useLanguage } from '../i18n/LanguageContext';
 import TemplatePicker from '../components/TemplatePicker';
-
 export default function Routines() {
-  const { t } = useLanguage();
-  const { data: routines, error, loading, reload } = useApi(() => api.get<Routine[]>('/api/routines'));
+  const { data, loading, error, reload } = useApi(() => api.get<Routine[]>('/api/routines'));
   const [name, setName] = useState('');
-  const [creating, setCreating] = useState(false);
-
-  async function createRoutine() {
-    if (!name.trim()) return;
-    setCreating(true);
-    try {
-      await api.post('/api/routines', { name: name.trim() });
-      setName('');
-      reload();
-    } finally {
-      setCreating(false);
-    }
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState('');
+  async function mutate(action: () => Promise<unknown>) {
+    setBusy(true); setMessage('');
+    try { await action(); setName(''); reload(); } catch (err) { setMessage(err instanceof Error ? err.message : 'No se pudo guardar. Intenta de nuevo.'); } finally { setBusy(false); }
   }
-
-  async function activate(id: number) {
-    await api.patch(`/api/routines/${id}/activate`);
-    reload();
+  function remove(routine: Routine) {
+    if (window.confirm(`Eliminar «${routine.name}» también borra sus días y sesiones. Haz una copia antes de eliminar. ¿Continuar?`)) mutate(() => api.delete(`/api/routines/${routine.id}`));
   }
-
-  async function remove(id: number, name: string) {
-    if (!window.confirm(`Delete "${name}"? This removes its workouts and logged sessions too.`)) return;
-    await api.delete(`/api/routines/${id}`);
-    reload();
-  }
-
-  return (
-    <>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <span className="eyebrow">{t('pages.training')}</span>
-          <h1 className="page-title">{t('pages.routines')}</h1>
-        </div>
-      </div>
-
-      <TemplatePicker onCreated={reload} />
-
-      <div className="card" style={{ maxWidth: 500 }}>
-        <span className="label">New routine</span>
-        <div style={{ display: 'flex', gap: 10 }}>
-          <input
-            type="text"
-            placeholder="e.g. Upper/Lower 4x"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && createRoutine()}
-            style={{ flex: 1 }}
-          />
-          <button className="btn-primary" onClick={createRoutine} disabled={creating || !name.trim()}>
-            Add
-          </button>
-        </div>
-      </div>
-
-      {loading && <span className="spinner-text">Loading…</span>}
-      {error && <span className="error-text">{error}</span>}
-
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-        {routines?.map((r) => (
-          <div
-            key={r.id}
-            className="card"
-            style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px' }}
-          >
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-              <Link to={`/app/routines/${r.id}`} style={{ font: "500 15px/1.2 'Inter Tight', sans-serif", color: 'var(--text-strong)' }}>
-                {r.name}
-              </Link>
-              <span style={{ font: "400 11.5px/1.4 'Inter', sans-serif", color: 'var(--text-muted)' }}>
-                {r.workouts.length} workout{r.workouts.length === 1 ? '' : 's'}
-              </span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              {r.is_active ? (
-                <span className="chip active">Active</span>
-              ) : (
-                <button className="btn-ghost" onClick={() => activate(r.id)}>
-                  Set active
-                </button>
-              )}
-              <button
-                onClick={() => remove(r.id, r.name)}
-                title="Delete routine"
-                style={{ border: 'none', background: 'transparent', color: 'var(--text-dim)', fontSize: 13, padding: '6px 8px' }}
-              >
-                Delete
-              </button>
-            </div>
-          </div>
-        ))}
-        {routines?.length === 0 && <span className="spinner-text">No routines yet — add one above.</span>}
-      </div>
-    </>
-  );
+  const sorted = [...(data || [])].sort((a, b) => Number(b.is_active) - Number(a.is_active));
+  return <>
+    <div className="page-heading"><div><h1>Mi entrenamiento</h1><p>Tu programa, tus días y cada serie que cuenta.</p></div><Link className="btn-ghost" to="/app/history">Ver historial</Link></div>
+    {loading && <p role="status">Cargando programas…</p>}{error && <div className="error-banner" role="alert">{error} <button onClick={reload}>Reintentar</button></div>}{message && <p role="alert" className="error-text">{message}</p>}
+    {sorted.map(r => <section className="panel routine-panel" key={r.id}><div className="section-heading"><div><h2>{r.name}</h2><p className="helper-text">{r.workouts.length} días de entrenamiento {r.is_active && '· Tu programa activo'}</p></div><div className="routine-actions"><Link className="btn-ghost" to={`/app/routines/${r.id}`}>Editar programa</Link>{!r.is_active && <button className="btn-ghost" disabled={busy} onClick={() => mutate(() => api.patch(`/api/routines/${r.id}/activate`))}>Usar programa</button>}<button className="quiet-button" disabled={busy} onClick={() => remove(r)}>Eliminar</button></div></div><div className="program-days">{r.workouts.map((w, i) => <div key={w.id}><span className="day-index">Día {i + 1}</span><h3>{w.name}</h3><p>{w.exercises.length} ejercicios · {w.exercises.reduce((n, e) => n + (e.target_sets || 0), 0)} series</p><Link className="btn-primary" to={`/app/session/${w.id}`}>Entrenar</Link></div>)}</div>{!r.workouts.length && <p className="helper-text">Este programa todavía no tiene días. <Link to={`/app/routines/${r.id}`}>Añade el primero.</Link></p>}</section>)}
+    {!loading && !data?.length && <div className="panel"><h2>Elige tu punto de partida</h2><p className="helper-text">Crea tu programa o abre las plantillas de abajo para empezar.</p></div>}
+    <form className="create-routine" onSubmit={e => { e.preventDefault(); if (name.trim()) mutate(() => api.post('/api/routines', { name: name.trim() })); }}><label className="field"><span>Crear un programa propio</span><input value={name} placeholder="Por ejemplo: Upper / Lower" onChange={e => setName(e.target.value)} maxLength={200} required /></label><button className="btn-primary" disabled={busy || !name.trim()}>Crear programa</button></form>
+    <details className="template-details"><summary>Empezar desde una plantilla</summary><TemplatePicker onCreated={reload} /></details>
+  </>;
 }

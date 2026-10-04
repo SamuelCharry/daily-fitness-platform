@@ -1,0 +1,11 @@
+.git
+.venv
+backend/venv
+**/node_modules
+**/dist
+**/__pycache__
+**/*.db*
+**/.env*
+backups
+.impeccable
+UI mockups for spreadsheet

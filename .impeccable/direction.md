@@ -1,0 +1,3 @@
+# Direction contract
+
+User-confirmed direction: spreadsheet-like tables, MacroFactor Workouts (https://macrofactor.com/workouts/) as the interface and session-flow reference, red without black. The explicit brief outranks concept seed 04ac4dbc. Warm white surfaces, brick-red actions, readable tabular numbers, horizontal exercise selector, clear targets, previous-set reuse, explicit save confirmation, persistent resumable workouts and a real rest timer. Desktop gets quiet sidebar and a working journal; mobile gets compact top navigation, one exercise at a time and a horizontally scrollable journal with sticky dates. Preserve existing data. No automatic diet adjustments, invented athlete records or unimplemented smart-progression claims.

@@ -1,218 +1,70 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api';
 import { useApi } from '../hooks/useApi';
-import type { BodyStat, DashboardData, Profile } from '../types';
-import MetricTrendCard from '../components/MetricTrendCard';
-import { classifyFFMI } from '../utils/ffmi';
-import { useLanguage } from '../i18n/LanguageContext';
-import Preparation from './Preparation';
-import StrengthMap from './StrengthMap';
+import type { BodyStat, Profile, Routine, WorkoutSession } from '../types';
+import { displayDate, localDate, mean, shiftDate } from '../utils/journal';
 
-type Tab = 'overview' | 'preparation' | 'strengthMap';
-
-function StatCard({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="card" style={{ padding: '20px 22px', gap: 10 }}>
-      <span className="label">{label}</span>
-      <span style={{ font: "500 28px/1 'Inter Tight', sans-serif", color: 'var(--text-strong)' }}>{value}</span>
-    </div>
-  );
-}
-
-function fmtSleep(minutes: number | null) {
-  if (minutes == null) return '—';
-  return `${Math.floor(minutes / 60)}h ${minutes % 60}m`;
-}
-
-function fmtSteps(steps: number | null) {
-  if (steps == null) return '—';
-  return steps >= 1000 ? `${(steps / 1000).toFixed(1)}k` : String(steps);
-}
-
-function OverviewTab() {
-  const { t } = useLanguage();
-  const { data, error, loading } = useApi(() => api.get<DashboardData>('/api/dashboard'));
-  const { data: history } = useApi(() => api.get<BodyStat[]>('/api/body-stats?days=3650'));
-  const { data: profile } = useApi(() => api.get<Profile | null>('/api/profile'));
-
-  if (loading) return <span className="spinner-text">Loading…</span>;
-  if (error) return <span className="error-text">{error}</span>;
-  if (!data) return null;
-
-  return (
-    <>
-      <section style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 16 }}>
-        <StatCard label={t('dashboard.weight')} value={data.weight != null ? `${data.weight} kg` : '—'} />
-        <StatCard label={t('dashboard.sleep')} value={fmtSleep(data.sleep_minutes)} />
-        <StatCard label={t('dashboard.steps')} value={fmtSteps(data.steps)} />
-      </section>
-
-      <section style={{ display: 'grid', gridTemplateColumns: '1.65fr 1fr', gap: 16 }}>
-        <MetricTrendCard stats={history || []} />
-
-        <div className="card">
-          <span className="label">{t('dashboard.todaysTraining')}</span>
-          {data.today_workout ? (
-            <>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                <span style={{ font: "500 20px/1.2 'Inter Tight', sans-serif", color: 'var(--text-strong)' }}>
-                  {data.today_workout.name}
-                </span>
-                <span style={{ font: "400 13px/1.4 'Inter', sans-serif", color: 'var(--text-muted)' }}>
-                  {data.today_workout.exercise_count} exercises · {data.today_workout.routine_name}
-                </span>
-              </div>
-              <Link
-                to={`/app/session/${data.today_workout.id}`}
-                className="btn-primary"
-                style={{ marginTop: 'auto', textAlign: 'center' }}
-              >
-                {t('dashboard.startWorkout')}
-              </Link>
-            </>
-          ) : (
-            <>
-              <span style={{ font: "400 13px/1.4 'Inter', sans-serif", color: 'var(--text-muted)' }}>
-                {t('dashboard.noRoutine')}
-              </span>
-              <Link to="/app/routines" className="btn-ghost" style={{ marginTop: 'auto', textAlign: 'center' }}>
-                {t('dashboard.setUpRoutine')}
-              </Link>
-            </>
-          )}
-        </div>
-      </section>
-
-      <section style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-        <div className="card">
-          <span className="label">{t('dashboard.performance')}</span>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-            {data.performance.map((r) => (
-              <div
-                key={r.label}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  paddingBottom: 12,
-                  borderBottom: '1px solid var(--border)',
-                }}
-              >
-                <span style={{ font: "400 13.5px/1 'Inter', sans-serif", color: 'var(--text-body)' }}>{r.label}</span>
-                <span style={{ font: "600 14px/1 'Inter Tight', sans-serif", color: 'var(--text)' }}>{r.trend}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="card">
-          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
-            <span className="label">{t('dashboard.tabPreparation')}</span>
-            <span style={{ font: "400 11px/1 'Inter', sans-serif", color: 'var(--text-dim)' }}>{t('dashboard.bodyFatEstimate')}</span>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12 }}>
-            {[
-              { name: 'Deurenberg', value: data.body_fat_methods.deurenberg },
-              { name: 'Navy', value: data.body_fat_methods.navy },
-              { name: 'InBody', value: data.body_fat_methods.inbody },
-            ].map((b) => (
-              <div key={b.name} style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                <span
-                  style={{
-                    font: "400 10.5px/1 'Inter', sans-serif",
-                    color: 'var(--text-dim)',
-                    textTransform: 'uppercase',
-                    letterSpacing: '.04em',
-                  }}
-                >
-                  {b.name}
-                </span>
-                <span style={{ font: "500 18px/1 'Inter Tight', sans-serif", color: 'var(--text)' }}>
-                  {b.value != null ? `${b.value}%` : '—'}
-                </span>
-              </div>
-            ))}
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginTop: 4 }}>
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                paddingBottom: 12,
-                borderBottom: '1px solid var(--border)',
-              }}
-            >
-              <span style={{ font: "400 13.5px/1 'Inter', sans-serif", color: 'var(--text-body)' }}>{t('dashboard.adherence')}</span>
-              <span style={{ font: "600 14px/1 'Inter Tight', sans-serif", color: 'var(--text)' }}>
-                {data.adherence_pct}%
-              </span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{ font: "400 13.5px/1 'Inter', sans-serif", color: 'var(--text-body)' }}>
-                FFMI{' '}
-                <Link to="/app/glossary" style={{ color: 'var(--text-dim)', fontSize: 11 }}>
-                  {t('dashboard.ffmiWhatsThis')}
-                </Link>
-              </span>
-              <span style={{ font: "600 14px/1 'Inter Tight', sans-serif", color: 'var(--text)', textAlign: 'right' }}>
-                {data.ffmi != null ? (
-                  <>
-                    {data.ffmi}{' '}
-                    <span style={{ font: "400 11px/1 'Inter', sans-serif", color: 'var(--text-dim)' }}>
-                      · {classifyFFMI(data.ffmi, profile?.sex === 'female' ? 'female' : 'male')}
-                    </span>
-                  </>
-                ) : (
-                  '—'
-                )}
-              </span>
-            </div>
-          </div>
-        </div>
-      </section>
-    </>
-  );
+export function WeightChart({ stats }: { stats: BodyStat[] }) {
+  const points = stats.filter(s => s.weight != null).sort((a, b) => a.date.localeCompare(b.date));
+  const chartRef = useRef<SVGSVGElement>(null);
+  const [width, setWidth] = useState(660);
+  useEffect(() => {
+    if (!chartRef.current) return;
+    const observer = new ResizeObserver(entries => setWidth(Math.max(200, entries[0].contentRect.width)));
+    observer.observe(chartRef.current);
+    return () => observer.disconnect();
+  }, [points.length]);
+  if (points.length < 2) return <div className="chart-empty"><p>{points.length ? 'Un registro, un punto de partida.' : 'Sin pesos en este periodo.'}</p><span>{points.length ? 'Añade otro día de peso para ver la tendencia.' : 'Amplía el periodo o registra tu peso en la bitácora.'}</span><Link to="/app/daily-log">Abrir bitácora</Link></div>;
+  const weights = points.map(p => p.weight!);
+  const low = Math.floor(Math.min(...weights) - 0.5), high = Math.ceil(Math.max(...weights) + 0.5);
+  const first = new Date(points[0].date + 'T12:00:00').getTime();
+  const span = new Date(points[points.length - 1].date + 'T12:00:00').getTime() - first || 1;
+  const x = (date: string) => 48 + ((new Date(date + 'T12:00:00').getTime() - first) / span) * (width - 64);
+  const y = (weight: number) => 180 - ((weight - low) / (high - low)) * 145;
+  const path = points.map((p, i) => `${i ? 'L' : 'M'} ${x(p.date)} ${y(p.weight!)}`).join(' ');
+  const averages = points.map(p => ({ date: p.date, weight: mean(points.filter(q => q.date >= shiftDate(p.date, -6) && q.date <= p.date).map(q => q.weight))! }));
+  const avgPath = averages.map((p, i) => `${i ? 'L' : 'M'} ${x(p.date)} ${y(p.weight)}`).join(' ');
+  return <svg ref={chartRef} className="weight-chart" viewBox={`0 0 ${width} 225`} role="img" aria-label={`Evolución de ${weights[0]} a ${weights[weights.length - 1]} kg. Promedio móvil de siete días.`}>
+    {[0, 1, 2, 3].map(i => { const w = low + (high - low) * i / 3; return <g key={i}><line x1="48" x2={width - 16} y1={y(w)} y2={y(w)} stroke="var(--border)" /><text x="38" y={y(w) + 4} textAnchor="end">{w.toFixed(1)}</text></g>; })}
+    <path d={path} fill="none" stroke="var(--chart-muted)" strokeWidth="1.5" />
+    <path d={avgPath} fill="none" stroke="var(--accent)" strokeWidth="2.5" />
+    {points.map(p => <circle key={p.date} cx={x(p.date)} cy={y(p.weight!)} r="3" fill="var(--bg-alt)" stroke="var(--chart-muted)"><title>{displayDate(p.date)}: {p.weight} kg</title></circle>)}
+    <text x="48" y="214">{displayDate(points[0].date)}</text><text x={width - 16} y="214" textAnchor="end">{displayDate(points[points.length - 1].date)}</text>
+  </svg>;
 }
 
 export default function Dashboard() {
-  const { t } = useLanguage();
-  const [tab, setTab] = useState<Tab>('overview');
-
-  const TABS: { key: Tab; labelKey: string }[] = [
-    { key: 'overview', labelKey: 'dashboard.tabOverview' },
-    { key: 'preparation', labelKey: 'dashboard.tabPreparation' },
-    { key: 'strengthMap', labelKey: 'dashboard.tabStrengthMap' },
-  ];
-
-  return (
-    <>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
-        <h1 className="page-title">{t('dashboard.title')}</h1>
-        <div style={{ display: 'flex', gap: 4, background: 'var(--bg-alt)', border: '1px solid var(--border)', borderRadius: 8, padding: 3 }}>
-          {TABS.map((tb) => (
-            <button
-              key={tb.key}
-              onClick={() => setTab(tb.key)}
-              style={{
-                border: 'none',
-                background: tab === tb.key ? 'var(--accent)' : 'transparent',
-                color: tab === tb.key ? 'var(--accent-text)' : 'var(--nav-inactive)',
-                padding: '7px 16px',
-                borderRadius: 6,
-                font: "600 12px/1 'Inter Tight', sans-serif",
-              }}
-            >
-              {t(tb.labelKey)}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {tab === 'overview' && <OverviewTab />}
-      {tab === 'preparation' && <Preparation />}
-      {tab === 'strengthMap' && <StrengthMap />}
-    </>
-  );
+  const { data, loading, error, reload } = useApi(async () => {
+    const [stats, routines, sessions, profile] = await Promise.all([
+      api.get<BodyStat[]>('/api/body-stats?days=36500'), api.get<Routine[]>('/api/routines'), api.get<WorkoutSession[]>('/api/sessions?days=90'), api.get<Profile | null>('/api/profile'),
+    ]);
+    return { stats, routines, sessions, profile };
+  });
+  const [range, setRange] = useState(90);
+  const today = localDate();
+  const latest = data?.stats.filter(s => s.weight != null && s.date <= today).at(-1);
+  const weekStart = shiftDate(today, -6), previousStart = shiftDate(today, -13);
+  const weekly = mean(data?.stats.filter(s => s.date >= weekStart && s.date <= today).map(s => s.weight) || []);
+  const previous = mean(data?.stats.filter(s => s.date >= previousStart && s.date < weekStart).map(s => s.weight) || []);
+  const change = weekly != null && previous != null ? weekly - previous : null;
+  const completed = data?.sessions.filter(s => s.finished_at && s.date >= weekStart && s.date <= today) || [];
+  const active = data?.routines.find(r => r.is_active);
+  const recent = data?.stats.filter(s => s.date <= today).slice(-5).reverse() || [];
+  const daysLeft = data?.profile?.competition_date ? Math.ceil((new Date(data.profile.competition_date + 'T12:00:00').getTime() - new Date(today + 'T12:00:00').getTime()) / 86400000) : null;
+  return <>
+    <div className="page-heading"><div><h1>El trabajo se nota.</h1><p>Tu entrenamiento y tu preparación, en un solo lugar.</p></div><Link className="btn-primary" to="/app/daily-log">Registrar mi día</Link></div>
+    <div className="date-line">{new Date().toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}<span className="phase-tag">{({ cut: 'Definición', bulk: 'Volumen', maintain: 'Mantenimiento' } as Record<string, string>)[data?.profile?.current_phase || ''] || 'Configura tu fase'}</span></div>
+    {loading && <p role="status">Cargando tu progreso…</p>}{error && <div className="error-banner" role="alert">No se pudo cargar tu resumen. {error} <button onClick={reload}>Reintentar</button></div>}
+    <section className="summary-strip" aria-label="Resumen de los últimos siete días">
+      <div><span>Último peso</span><strong>{latest?.weight?.toFixed(1) ?? '—'} <small>kg</small></strong><p>{latest ? displayDate(latest.date) : 'Aún sin registros'}</p></div>
+      <div><span>Promedio · 7 días</span><strong>{weekly?.toFixed(1) ?? '—'} <small>kg</small></strong><p>{change == null ? 'La tendencia aparece con dos semanas' : `${change > 0 ? '+' : ''}${change.toFixed(2)} kg frente a los 7 días anteriores`}</p></div>
+      <div><span>Entrenamientos · 7 días</span><strong>{data ? completed.length : '—'} <small>{data?.profile?.weekly_sessions ? `/ ${data.profile.weekly_sessions}` : 'sesiones'}</small></strong><p>Sesiones completadas</p></div>
+      <div><span>Tu próxima meta</span><strong>{daysLeft == null ? 'A tu ritmo' : daysLeft >= 0 ? daysLeft : 'Finalizada'} <small>{daysLeft != null && daysLeft >= 0 ? 'días' : ''}</small></strong><p>{daysLeft == null ? 'Añade una fecha en preparación' : 'Fecha objetivo de preparación'}</p></div>
+    </section>
+    <div className="dashboard-grid"><section className="panel weight-panel"><div className="section-heading"><h2>Peso en perspectiva</h2><div className="segmented" aria-label="Periodo de peso">{[14, 30, 90].map(r => <button key={r} aria-pressed={range === r} className={range === r ? 'active' : ''} onClick={() => setRange(r)}>{r} días</button>)}</div></div><WeightChart stats={(data?.stats || []).filter(s => s.date >= shiftDate(today, -range + 1) && s.date <= today)} /><div className="chart-legend"><span><i />Promedio de 7 días</span><span><i className="muted-dot" />Peso diario</span></div><p className="helper-text">Un día fluctúa. El promedio muestra la dirección.</p></section>
+    <section className="training-panel"><div className="section-heading"><h2>A entrenar</h2><span className="phase-tag">{active ? 'Rutina activa' : 'Tu programa'}</span></div><h3>{active?.name || 'Empieza con tu rutina'}</h3><p>{active ? 'Elige el día que vas a entrenar. Tus últimas series estarán a mano.' : 'Crea una rutina o parte de una plantilla. Después registra cada serie con peso, repeticiones y RIR.'}</p><div className="workout-list">{active?.workouts.map(w => <Link key={w.id} to={`/app/session/${w.id}`}><div><strong>{w.name}</strong><span>{w.exercises.length} ejercicios</span></div><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6" /></svg></Link>)}</div><Link className="btn-ghost" to="/app/routines">{active ? 'Editar mi programa' : 'Crear mi programa'}</Link></section></div>
+    <section className="panel recent-panel"><div className="section-heading"><div><h2>Tu bitácora, de un vistazo</h2><p className="helper-text">Los últimos días que registraste.</p></div><Link to="/app/daily-log">Ver y editar bitácora</Link></div><div className="table-scroll"><table className="read-table"><thead><tr><th>Fecha</th><th>Peso</th><th>Calorías</th><th>Proteína</th><th>Pasos</th><th>Sueño</th></tr></thead><tbody>{recent.map(s => <tr key={s.id}><th>{displayDate(s.date)}</th><td>{s.weight == null ? '—' : `${s.weight} kg`}</td><td>{s.calories?.toLocaleString('es-CO') ?? '—'}</td><td>{s.protein_g == null ? '—' : `${s.protein_g} g`}</td><td>{s.steps?.toLocaleString('es-CO') ?? '—'}</td><td>{s.sleep_minutes == null ? '—' : `${(s.sleep_minutes / 60).toFixed(1)} h`}</td></tr>)}</tbody></table></div>{!recent.length && <div className="table-empty">Todavía no hay días registrados. <Link to="/app/daily-log">Añade el primero.</Link></div>}</section>
+    <div className="daily-note"><strong>La constancia deja un registro.</strong><span>Entrena. Anota. Revisa. Repite.</span><Link to="/app/preparation">Revisar mi preparación</Link></div>
+  </>;
 }

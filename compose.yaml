@@ -1,0 +1,40 @@
+services:
+  app:
+    build: .
+    restart: unless-stopped
+    environment:
+      APP_ENV: production
+      PERSONAL_MODE: 'false'
+      OWNER_EMAIL: ${OWNER_EMAIL:?Set OWNER_EMAIL in .env}
+      OWNER_PASSWORD: ${OWNER_PASSWORD:?Set OWNER_PASSWORD in .env}
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env}
+      DATABASE_URL: sqlite:////data/fitness.db
+      TZ: America/Bogota
+    volumes:
+      - fitness_data:/data
+    expose:
+      - '8000'
+    healthcheck:
+      test: ['CMD', 'python', '-c', "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+  web:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      app:
+        condition: service_healthy
+    environment:
+      DOMAIN: ${DOMAIN:?Set DOMAIN in .env}
+    ports:
+      - '80:80'
+      - '443:443'
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+volumes:
+  fitness_data:
+  caddy_data:
+  caddy_config:

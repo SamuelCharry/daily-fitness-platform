@@ -1,161 +1,76 @@
-# Daily Fitness Platform
+# Cool for the Summer
 
-Plataforma web personal de coaching de fitness: organiza rutinas de gym reales
-(migradas de un Excel/Google Sheet), las estructura por grupo muscular y
-patrón de movimiento, y hace seguimiento de progreso (peso, medidas,
-macros, volumen de entrenamiento) con datos reales cargados por el usuario.
+Bitácora personal para entrenamientos, peso y preparación de culturismo natural. Interfaz en español, rojo ladrillo sobre blanco cálido, tablas editables y sesiones pensadas para usar desde el gimnasio. React / FastAPI / SQLite, una sola aplicación para publicar y una sola cuenta.
 
-Nace del pitch en [`IDEA.txt`](./IDEA.txt): "Proyecto 2 - Coach de Fitness
-(Cloud / Full-stack)", pensado como pieza defendible en entrevistas técnicas
-por tener un modelo de datos no trivial y una API propia, no solo un CRUD
-plano.
+## Qué funciona
 
-## Arquitectura
+- Resumen con último peso, promedio móvil de 7 días, comparación semanal y sesiones completadas.
+- Bitácora por fecha: peso, energía, macros, pasos, sueño, cardio, medidas y notas. Guardado por fila o de todas las filas modificadas, validación y CSV.
+- Rutinas propias y plantillas. Sesiones con kg, repeticiones, RIR, valores de la sesión anterior, edición de series y descanso con reloj real.
+- Retomar una sesión pendiente del mismo día sin crear otra al recargar.
+- Preparación: fase, fecha objetivo, peso objetivo, energía/proteína objetivo, frecuencia y notas. Datos guardados en el servidor.
+- Sin registro público. Modo local sin login; servidor con correo y contraseña, sesión recordada durante 7 días.
 
-Monorepo con dos apps independientes que se comunican por HTTP/JSON:
+Referencia de experiencia: [MacroFactor Workouts](https://macrofactor.com/workouts/). Esta versión no replica su algoritmo de progresión, sus programas comerciales ni todas sus funciones avanzadas.
 
-```
-daily-fitness-platform/
-├── backend/     FastAPI + SQLAlchemy + SQLite (Postgres-ready)
-└── frontend/    React 19 + TypeScript + Vite, SPA con auth por JWT
-```
+## Usar ahora en Windows
 
-- El **backend** expone una API REST bajo `/api/*`, protegida con JWT excepto
-  registro/login. No hay SSR: es una API pura consumida por el SPA.
-- El **frontend** es un SPA client-side (React Router) que guarda el token en
-  `localStorage` y lo adjunta en cada request (`frontend/src/api.ts`).
-- Toda la lógica de dominio "interesante" (fórmulas de body-fat, FFMI,
-  macros, sugerencias de fase, guías de volumen) vive en el frontend como
-  funciones puras en `src/utils/`, separada de los componentes de UI — así
-  se puede testear y razonar sobre ella sin tocar React.
+Desde la raíz, crear el entorno y construir el frontend:
 
-### Modelo de datos
-
-El núcleo del proyecto es esta cadena de relaciones (`backend/app/models.py`):
-
-```
-MuscleGroup → Muscle → Exercise → WorkoutExercise → Workout → Routine → User
-                                        │
-                                        └── WorkoutSession → SetLog (peso, reps, RIR reales)
+```powershell
+python -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r backend/requirements.txt
+npm ci --prefix frontend
+npm run build --prefix frontend
+.\scripts\start-local.ps1
 ```
 
-- **`Routine`**: un programa (ej. "Push/Pull/Legs"), con `is_active` para
-  marcar cuál sigue el usuario.
-- **`Workout`**: un día tipo dentro de la rutina (ej. "Upper", "Push").
-- **`WorkoutExercise`**: el "slot" de un ejercicio dentro de un día —
-  series/reps/RIR objetivo, no lo que realmente se hizo.
-- **`WorkoutSession`** + **`SetLog`**: la ejecución real en una fecha
-  concreta, serie por serie (peso, reps, RIR real). Esto es lo que alimenta
-  el progreso — nunca se mezcla con el plan.
-- **`BodyStat`**: tracking diario (peso, cintura/cuello/cadera, calorías,
-  macros, pasos, sueño, cardio) con constraint único `(user_id, date)` —
-  un registro por usuario por día, sin datos de relleno.
+Abrir http://127.0.0.1:8000. El script reutiliza la cuenta existente si hay exactamente una. Si hay varias, pasar `-OwnerEmail 'correo-de-la-cuenta-existente'`. La base existente en `backend/fitness.db` se mantiene; las columnas nuevas se añaden sin borrar tablas. No exponer este modo a Internet.
 
-Esta separación plan-vs-ejecución es la decisión de diseño central: permite
-comparar lo prescrito contra lo realmente entrenado.
+Para desarrollo: levantar la API con el script y `npm run dev --prefix frontend`; Vite redirige `/api` a la API local.
 
-## Stack y por qué
+## Publicar por poco dinero
 
-| Capa | Tecnología | Notas |
-|---|---|---|
-| Backend framework | **FastAPI** | tipado con Pydantic, docs automáticas en `/docs` |
-| ORM | **SQLAlchemy** | modelos declarativos, migraciones caseras (ver abajo) |
-| DB local | **SQLite** (`fitness.db`) | mismo código sirve para Postgres/Supabase en prod — solo cambia `DATABASE_URL` |
-| Auth | **JWT** (`python-jose`) + **bcrypt** | `OAuth2PasswordBearer`, tokens de 7 días |
-| Frontend framework | **React 19** + **TypeScript** | Vite como bundler/dev server |
-| Routing | **React Router 7** | rutas protegidas con wrapper `RequireAuth` |
-| Estado de servidor | Hook propio (`useApi`), sin librería externa (no React Query/SWR) |
-| Estilos | CSS plano (`index.css`) con `data-theme` para dark/light/system |
-| Lint | **oxlint** (en vez de ESLint) |
-| i18n | Contexto propio (`LanguageContext`) con diccionario de traducciones |
+Recomendación inicial: **Railway Hobby**, mínimo US$5/mes con US$5 de consumo incluido; puede aumentar con el uso. Una sola aplicación y un volumen para SQLite evitan pagar dos servicios y una base aparte. Configuración revisada el 4 de octubre de 2026. [Precio oficial](https://railway.com/pricing).
 
-Decisión notable: **sin migraciones tipo Alembic**. `database.py` tiene un
-`run_migrations()` casero que en cada arranque compara las columnas del
-modelo contra las de la tabla existente en SQLite y agrega las que falten
-con `ALTER TABLE`. Suficiente para desarrollo en solitario; se cambiaría por
-Alembic si el proyecto pasara a Postgres en equipo.
+1. Crear un servicio desde este repositorio (raíz). Railway detecta `Dockerfile`; `railway.toml` configura el healthcheck.
+2. Añadir un volumen montado en `/data` **antes de empezar a registrar datos**. [Volúmenes](https://docs.railway.com/volumes).
+3. Configurar `APP_ENV=production`, `PERSONAL_MODE=false`, `OWNER_EMAIL`, `OWNER_PASSWORD` (al menos 12 caracteres), `JWT_SECRET` (aleatorio y largo), `DATABASE_URL=sqlite:////data/fitness.db`, `TZ=America/Bogota`.
+4. Generar el dominio HTTPS de Railway. No necesitas comprar dominio.
+5. Entrar con el correo/contraseña configurados. El propietario se crea una vez; cambiar OWNER_PASSWORD después no reemplaza la contraseña de una cuenta existente.
+6. Establecer alertas/límite de gasto en Railway y comprobar `/api/health`, login, guardado y persistencia después de reiniciar.
 
-## Features implementadas
+La cuenta y pago del alojamiento requieren al propietario. No hay despliegue remoto realizado todavía.
 
-- **Auth**: registro/login con JWT, perfil de usuario (altura, sexo, fecha
-  de nacimiento, fase actual: cut/maintain/bulk).
-- **Rutinas**: CRUD de rutinas y días, con picker de ejercicios por músculo
-  y plantillas predefinidas (`routineTemplates.ts`).
-- **Sesión de entrenamiento**: registrar series reales (peso/reps/RIR) contra
-  el plan del día.
-- **Daily log**: peso corporal, medidas, macros, pasos, sueño, cardio,
-  cheat meals.
-- **Dashboard**: cálculo de:
-  - **% de grasa corporal** — fórmula Navy (circunferencias) y fórmula de
-    Deurenberg (BMI + edad) como fallback.
-  - **FFMI** (Fat-Free Mass Index) con bandas de clasificación para
-    lifters naturales (basadas en el estudio de Kouri et al.), ajustadas
-    para mujeres.
-  - **Tendencia de peso** (`phaseSuggestion.ts`): analiza la pendiente de
-    peso semanal y sugiere ajuste de calorías según la fase (cut/bulk).
-  - **Volumen semanal por músculo** (`volumeGuideline.ts`): compara series
-    semanales reales contra objetivos por músculo, con soporte para
-    "pisos" (mínimos) vs techos.
-  - **Mapa de fuerza** (Strength Map): vista corporal anterior/posterior
-    con estado de volumen por músculo.
-- **Macro calculator**: rangos de calorías/macros por peso corporal y sexo
-  (tablas adaptadas de una guía de pérdida de grasa, convertidas de
-  lb/in a kg/cm).
-- **Historial y progreso por ejercicio**: series pasadas, gráfico de
-  tendencia por área muscular.
-- **Glosario**: términos de entrenamiento explicados, reutilizable como
-  página standalone (`/glossary`) o embebida en la app.
-- **Preferencias**: tema (claro/oscuro/sistema) e idioma, persistidos en
-  `localStorage`.
+### Más adelante: servidor propio
 
-## Cómo correrlo en local
+Copiar `.env.example` a `.env`, rellenar dominio, correo, contraseña y secreto. En un VPS con Docker y un dominio apuntando al servidor:
 
-**Backend** (`backend/`):
-
-```bash
-pip install -r requirements.txt
-python -m app.seed        # carga la librería de ejercicios (idempotente)
-uvicorn app.main:app --reload
+```sh
+docker compose up -d --build
 ```
 
-Health check: `http://127.0.0.1:8000/api/health` · Docs: `/docs`
+Caddy gestiona HTTPS; la API solo se expone dentro de la red interna. El volumen `fitness_data` conserva SQLite entre reinicios. No usar `docker compose down -v`: elimina los volúmenes.
 
-**Frontend** (`frontend/`):
+## Datos y copias
 
-```bash
-npm install
-npm run dev
+Antes de actualizar o migrar:
+
+```powershell
+.\.venv\Scripts\python.exe scripts/backup.py backend/fitness.db
 ```
 
-Corre en Vite (puerto 5173 por defecto). `VITE_API_BASE` en `.env` apunta
-al backend local; el CORS del backend ya permite `localhost:5173-5175`.
+Para migrar registros al servidor, cargar la copia de SQLite al volumen `/data/fitness.db` con la aplicación detenida y configurar OWNER_EMAIL con el correo de la cuenta que posee las rutinas. La clave existente continúa vigente; OWNER_PASSWORD solo crea cuentas nuevas. Restaurar una copia únicamente con la aplicación detenida. CSV respalda la bitácora; la copia SQLite conserva también rutinas, series y perfil.
 
-## Qué aprendí / de qué me sirvió este proyecto
+## Verificación
 
-- **Separar plan de ejecución en el modelo de datos.** `WorkoutExercise`
-  (prescripción) vs `SetLog` (lo real) es el patrón que hace posible
-  comparar progreso contra plan sin ensuciar ninguno de los dos.
-- **FastAPI + SQLAlchemy + JWT de punta a punta**: dependency injection con
-  `Depends(get_current_user)`, `OAuth2PasswordBearer`, hashing con bcrypt.
-- **Migraciones "a mano" con introspección de SQLAlchemy** (`inspect(engine)`)
-  como alternativa liviana a Alembic para un proyecto en solitario —
-  entendiendo el trade-off (no sirve para producción en equipo).
-- **Llevar fórmulas de dominio reales a código**: body-fat (Navy,
-  Deurenberg), FFMI, bandas de clasificación, macros por peso — traducir
-  tablas/fórmulas de una fuente externa a funciones puras testeables.
-- **React 19 + Router 7 sin librerías de data-fetching**: manejar loading/
-  error/cache a mano con un hook propio en vez de reachar por React Query,
-  para entender qué resuelve esa clase de librería.
-- **Diseñar para portar de SQLite a Postgres desde el día uno** (mismo
-  `DATABASE_URL`, mismo ORM) sin sobre-ingenierizar el MVP.
-- **i18n y theming con Context API puro**, sin librerías, para un SPA chico.
+```powershell
+npm run build --prefix frontend
+npm run lint --prefix frontend
+.\.venv\Scripts\python.exe -m pip install -r backend/requirements-dev.txt
+.\.venv\Scripts\python.exe -m unittest discover -s backend/tests -v
+```
 
-## Fuera de alcance (v1)
+Docker requiere Docker Desktop iniciado. El despliegue antiguo de GitHub Pages queda manual: una página estática por sí sola no ejecuta la API ni guarda la base de datos.
 
-Documentado en `IDEA.txt`:
-
-- Reconocimiento de imágenes / estimación visual de composición corporal.
-- Taxonomía avanzada de biomecánica ("joint actions").
-- Conteo de repeticiones por visión por computadora, reusando el modelo de
-  pose de un proyecto hermano (`motion-runner-edge-ai`) — planeado como
-  feature diferenciadora futura, no parte del MVP.
+Validación realizada: compilación correcta, lint sin errores (8 advertencias), 7 pruebas de integración aprobadas y revisión en escritorio/móvil. La configuración de Compose se validó; la imagen Docker aún no se ha probado porque el motor local no respondió.

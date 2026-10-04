@@ -1,145 +1,47 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { api } from '../api';
 import { useApi } from '../hooks/useApi';
 import type { BodyStat, Profile } from '../types';
-import MacroCalculator from '../components/MacroCalculator';
-import PhaseSuggestionCard from '../components/PhaseSuggestionCard';
+import { localDate, mean, shiftDate } from '../utils/journal';
+import StrengthMap from './StrengthMap';
 
-function average(values: number[]) {
-  if (!values.length) return null;
-  return Math.round(values.reduce((a, b) => a + b, 0) / values.length);
-}
-
+const empty: Profile = { height_cm: null, sex: null, birthdate: null, current_phase: 'maintain', phase_start_date: null, competition_date: null, goal_weight: null, target_calories: null, target_protein: null, weekly_sessions: null, preparation_notes: null };
 export default function Preparation() {
-  const { data: profile, setData: setProfile, loading: profileLoading } = useApi(() =>
-    api.get<Profile | null>('/api/profile'),
-  );
-  const { data: stats, loading: statsLoading } = useApi(() => api.get<BodyStat[]>('/api/body-stats?days=30'));
-
-  const [form, setForm] = useState<Profile>({
-    height_cm: null,
-    sex: null,
-    birthdate: null,
-    current_phase: 'maintain',
-    phase_start_date: null,
-  });
+  const { data, loading, error, reload } = useApi(async () => ({ profile: await api.get<Profile | null>('/api/profile'), stats: await api.get<BodyStat[]>('/api/body-stats?days=30') }));
+  const [form, setForm] = useState<Profile>(empty);
   const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
-
-  useEffect(() => {
-    if (profile) setForm(profile);
-  }, [profile]);
-
-  async function save() {
-    setSaving(true);
-    setSaved(false);
-    try {
-      const updated = await api.put<Profile>('/api/profile', form);
-      setProfile(updated);
-      setSaved(true);
-    } finally {
-      setSaving(false);
-    }
+  const [message, setMessage] = useState('');
+  const [map, setMap] = useState(false);
+  useEffect(() => { if (data) setForm({ ...empty, ...data.profile }); }, [data]);
+  async function save(e: React.FormEvent) {
+    e.preventDefault(); setSaving(true); setMessage('');
+    try { await api.put('/api/profile', form); setMessage('Objetivos guardados.'); reload(); }
+    catch (err) { setMessage(err instanceof Error ? err.message : 'No se pudo guardar. Intenta de nuevo.'); }
+    finally { setSaving(false); }
   }
-
-  async function setPhase(phase: string) {
-    const next = { ...form, current_phase: phase, phase_start_date: form.phase_start_date ?? new Date().toISOString().slice(0, 10) };
-    setForm(next);
-    const updated = await api.put<Profile>('/api/profile', next);
-    setProfile(updated);
+  function numberField(key: keyof Profile, label: string, min = 0, max = 20000, step = 'any') {
+    return <label className="field"><span>{label}</span><input type="number" min={min} max={max} step={step} value={form[key] ?? ''} onChange={e => setForm({ ...form, [key]: e.target.value === '' ? null : Number(e.target.value) })} /></label>;
   }
-
-  const latestWeight = stats?.length ? stats[stats.length - 1].weight : null;
-  const avgCalories = average((stats || []).map((s) => s.calories).filter((v): v is number => v != null));
-  const avgProtein = average((stats || []).map((s) => s.protein_g).filter((v): v is number => v != null));
-  const loggedDays = (stats || []).filter((s) => s.weight != null).length;
-  const adherence = Math.round((Math.min(loggedDays, 14) / 14) * 100);
-
-  return (
-    <>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
-        <div style={{ display: 'flex', gap: 4, background: 'var(--bg-alt)', border: '1px solid var(--border)', borderRadius: 8, padding: 3 }}>
-          {['cut', 'maintain', 'bulk'].map((p) => (
-            <button
-              key={p}
-              onClick={() => setPhase(p)}
-              style={{
-                border: 'none',
-                background: form.current_phase === p ? 'var(--accent)' : 'transparent',
-                color: form.current_phase === p ? 'var(--accent-text)' : 'var(--nav-inactive)',
-                padding: '7px 16px',
-                borderRadius: 6,
-                font: "600 12px/1 'Inter Tight', sans-serif",
-                textTransform: 'capitalize',
-              }}
-            >
-              {p}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {(profileLoading || statsLoading) && <span className="spinner-text">Loading…</span>}
-
-      <section style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 16 }}>
-        {[
-          { label: 'Bodyweight', value: latestWeight != null ? `${latestWeight} kg` : '—' },
-          { label: 'Calories', value: avgCalories != null ? `${avgCalories} avg` : '—' },
-          { label: 'Protein', value: avgProtein != null ? `${avgProtein} g avg` : '—' },
-          { label: 'Adherence (14d)', value: `${adherence}%` },
-        ].map((s) => (
-          <div key={s.label} className="card" style={{ padding: '18px 20px', gap: 8 }}>
-            <span className="label" style={{ fontSize: 10.5 }}>
-              {s.label}
-            </span>
-            <span style={{ font: "500 22px/1 'Inter Tight', sans-serif", color: 'var(--text-strong)' }}>{s.value}</span>
-          </div>
-        ))}
-      </section>
-
-      <div className="card">
-        <span className="label">Profile</span>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, maxWidth: 500 }}>
-          <label className="field">
-            <span className="label">Height (cm)</span>
-            <input
-              type="number"
-              value={form.height_cm ?? ''}
-              onChange={(e) => setForm({ ...form, height_cm: e.target.value ? Number(e.target.value) : null })}
-            />
-          </label>
-          <label className="field">
-            <span className="label">Sex</span>
-            <select
-              value={form.sex ?? ''}
-              onChange={(e) => setForm({ ...form, sex: e.target.value || null })}
-            >
-              <option value="">—</option>
-              <option value="male">Male</option>
-              <option value="female">Female</option>
-            </select>
-          </label>
-          <label className="field">
-            <span className="label">Birthdate</span>
-            <input
-              type="date"
-              value={form.birthdate ?? ''}
-              onChange={(e) => setForm({ ...form, birthdate: e.target.value || null })}
-            />
-          </label>
-        </div>
-        <div>
-          <button className="btn-primary" onClick={save} disabled={saving}>
-            {saving ? 'Saving…' : 'Save profile'}
-          </button>
-          {saved && <span style={{ marginLeft: 12, color: 'var(--text-dim)', fontSize: 12 }}>Saved.</span>}
-        </div>
-      </div>
-
-      <section style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-        <MacroCalculator profile={profile ?? null} weightKg={latestWeight} />
-        <PhaseSuggestionCard stats={stats || []} phase={form.current_phase} />
-      </section>
-    </>
-  );
+  const week = data?.stats.filter(s => s.date >= shiftDate(localDate(), -6) && s.date <= localDate()) || [];
+  const avgCalories = mean(week.map(s => s.calories)), avgProtein = mean(week.map(s => s.protein_g));
+  return <>
+    <div className="page-heading"><div><h1>Tu preparación</h1><p>Objetivos claros. Decisiones con perspectiva.</p></div><Link className="btn-ghost" to="/app/daily-log">Registrar check-in</Link></div>
+    {loading && <p role="status">Cargando preparación…</p>}{error && <div className="error-banner" role="alert">{error} <button onClick={reload}>Reintentar</button></div>}
+    <div className="preparation-grid"><form className="panel preparation-form" onSubmit={save}><h2>Mi siguiente etapa</h2><div className="form-grid">
+      <label className="field"><span>Fase actual</span><select value={form.current_phase || 'maintain'} onChange={e => setForm({ ...form, current_phase: e.target.value, phase_start_date: localDate() })}><option value="maintain">Mantenimiento</option><option value="bulk">Volumen</option><option value="cut">Definición</option></select></label>
+      <label className="field"><span>Inicio de la fase</span><input type="date" value={form.phase_start_date || ''} onChange={e => setForm({ ...form, phase_start_date: e.target.value || null })} /></label>
+      <label className="field"><span>Fecha objetivo / competición</span><input type="date" value={form.competition_date || ''} onChange={e => setForm({ ...form, competition_date: e.target.value || null })} /></label>
+      {numberField('goal_weight', 'Peso objetivo · kg', 1, 500)}
+      {numberField('target_calories', 'Objetivo diario · kcal', 1, 20000, '1')}
+      {numberField('target_protein', 'Proteína diaria · g', 0, 1000)}
+      {numberField('weekly_sessions', 'Sesiones por semana', 1, 14, '1')}
+      {numberField('height_cm', 'Estatura · cm', 50, 250)}
+      <label className="field"><span>Sexo (para estimaciones)</span><select value={form.sex || ''} onChange={e => setForm({ ...form, sex: e.target.value || null })}><option value="">Sin especificar</option><option value="male">Masculino</option><option value="female">Femenino</option></select></label>
+      <label className="field"><span>Fecha de nacimiento</span><input type="date" max={localDate()} value={form.birthdate || ''} onChange={e => setForm({ ...form, birthdate: e.target.value || null })} /></label>
+    </div><label className="field"><span>Enfoque del bloque, posing y notas</span><textarea rows={4} maxLength={5000} placeholder="Qué quiero mejorar, qué voy a observar, qué revisar en el próximo check-in…" value={form.preparation_notes || ''} onChange={e => setForm({ ...form, preparation_notes: e.target.value || null })} /></label><button className="btn-primary" disabled={saving || loading || !!error}>{saving ? 'Guardando…' : 'Guardar mis objetivos'}</button>{message && <p role="status">{message}</p>}</form>
+      <aside className="preparation-review"><h2>Check-in semanal</h2><p>Últimos 7 días. Solo cuentan los valores que registraste.</p><dl><div><dt>Peso promedio</dt><dd>{mean(week.map(s => s.weight))?.toFixed(2) ?? '—'} kg</dd></div><div><dt>Energía promedio</dt><dd>{avgCalories?.toFixed(0) ?? '—'} kcal</dd></div><div><dt>Proteína promedio</dt><dd>{avgProtein?.toFixed(0) ?? '—'} g</dd></div><div><dt>Días con peso</dt><dd>{week.filter(s => s.weight != null).length} / 7</dd></div><div><dt>Sueño promedio</dt><dd>{mean(week.map(s => s.sleep_minutes)) == null ? '—' : (mean(week.map(s => s.sleep_minutes))! / 60).toFixed(1)} h</dd></div></dl><p className="helper-text">Los objetivos los defines tú con tu entrenador. Esta bitácora muestra lo registrado y no ajusta tu dieta automáticamente.</p><Link to="/app/daily-log">Completar mi semana</Link></aside>
+    </div>
+    <section className="panel"><div className="section-heading"><h2>Volumen de entrenamiento</h2><button className="btn-ghost" onClick={() => setMap(!map)} aria-expanded={map}>{map ? 'Ocultar detalle' : 'Revisar por músculo'}</button></div>{map ? <StrengthMap /> : <p className="helper-text">Revisa las series registradas por grupo muscular para acompañar tu programación.</p>}</section>
+  </>;
 }

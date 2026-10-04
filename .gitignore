@@ -4,3 +4,9 @@ __pycache__/
 *.db-journal
 .env
 venv/
+
+.venv/
+backups/
+*.db-wal
+*.db-shm
+.impeccable/review/
