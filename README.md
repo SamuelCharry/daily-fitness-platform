@@ -1,6 +1,6 @@
 # Cool for the Summer
 
-Bitácora personal para entrenamientos, peso y preparación de culturismo natural. Interfaz en español, grafito sobre blanco y sesiones pensadas para usar desde el gimnasio. React / FastAPI / SQLite, una sola aplicación para publicar y una sola cuenta.
+Bitácora personal para entrenamientos, peso y preparación de culturismo natural. Interfaz en español, grafito sobre blanco y sesiones pensadas para usar desde el gimnasio. React / FastAPI / SQLite, una sola aplicación para publicar con cuentas y registros privados para cada persona.
 
 ## Qué funciona
 
@@ -12,7 +12,7 @@ Bitácora personal para entrenamientos, peso y preparación de culturismo natura
 - Sesiones con kg, repeticiones, RIR, valores de la sesión anterior y descanso con reloj real. Objetivos y datos personales en Preferencias.
 - Sincronización con iPhone: un Atajo de iOS envía pasos y sueño de Salud a `POST /api/sync/health` con una clave propia (Preferencias → Sincronizar con iPhone). Solo funciona con la app publicada; el iPhone no llega a 127.0.0.1.
 - Sesiones con contador de tiempo total y de descanso entre series (vibra al cumplir el descanso).
-- Sin registro público. Modo local sin login; servidor con correo y contraseña, sesión recordada durante 7 días.
+- Registro y login con correo y contraseña; datos separados por cuenta y sesión recordada durante 7 días. Modo local personal sin login para el propietario.
 
 Referencia de experiencia: [MacroFactor Workouts](https://macrofactor.com/workouts/). Esta versión no replica su algoritmo de progresión, sus programas comerciales ni todas sus funciones avanzadas.
 
@@ -60,6 +60,10 @@ docker compose up -d --build
 Caddy gestiona HTTPS; la API solo se expone dentro de la red interna. El volumen `fitness_data` conserva SQLite entre reinicios. No usar `docker compose down -v`: elimina los volúmenes.
 
 ## Datos y copias
+
+### Cuentas y acceso
+
+En el login, «Crear una cuenta» abre `/register`. Cada persona elige correo y contraseña (12 caracteres mínimo, 72 bytes máximo), entra automáticamente tras registrarse y tiene sus propios registros, rutinas, sesiones y perfil. No necesita código de configuración. Las contraseñas se guardan con bcrypt y las sesiones JWT duran siete días; el logout elimina la sesión de este navegador. El correo no se verifica por email y todavía no hay recuperación de contraseña. Las cuentas y datos existentes se conservan. `REGISTRATION_ENABLED=false` permite cerrar nuevas altas sin impedir el login. El límite de intentos funciona por proceso/IP; si el proxy agrupa las IP, comparte ese límite. El modo local sin login mantiene desactivado el registro.
 
 Antes de actualizar o migrar:
 

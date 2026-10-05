@@ -47,10 +47,14 @@ export default function App() {
                 }
               />
               <Route
+                path="/register"
+                element={<RedirectIfAuthed><Login key="register" createAccount /></RedirectIfAuthed>}
+              />
+              <Route
                 path="/login"
                 element={
                   <RedirectIfAuthed>
-                    <Login />
+                    <Login key="login" />
                   </RedirectIfAuthed>
                 }
               />

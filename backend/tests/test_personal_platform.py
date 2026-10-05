@@ -4,6 +4,10 @@ import sys
 import tempfile
 import unittest
 import sqlite3
+from unittest.mock import patch
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import StaticPool
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
@@ -41,7 +45,7 @@ class PersistenceAndAccessTests(unittest.TestCase):
     def test_access_and_registration(self):
         self.assertEqual(self.client.get('/api/body-stats').status_code, 401)
         self.assertEqual(self.client.get('/api/body-stats', headers={'Authorization': 'Bearer broken'}).status_code, 401)
-        self.assertEqual(self.client.post('/api/auth/register', json={'email': 'other@example.com', 'password': 'password123'}).status_code, 403)
+        self.assertEqual(self.client.post('/api/auth/register', json={'email': 'test@example.com', 'password': 'password12345'}).status_code, 409)
         self.assertEqual(self.client.post('/api/auth/login', data={'username': 'wrong@example.com', 'password': 'test-only-password-123'}).status_code, 401)
         self.assertFalse(self.client.get('/api/auth/config').json()['personal_mode'])
 
@@ -157,5 +161,54 @@ class PersistenceAndAccessTests(unittest.TestCase):
         self.assertEqual(self.client.get('/app/routines').status_code, 200)
         self.assertIn('Cool for the Summer', self.client.get('/app/settings').text)
         self.assertEqual(self.client.get('/api/not-a-route').status_code, 404)
+
+    def test_registration_login_and_account_isolation(self):
+        from app.database import Base
+        from app.auth import get_db
+        isolated_engine = create_engine('sqlite://', connect_args={'check_same_thread': False}, poolclass=StaticPool)
+        Base.metadata.create_all(isolated_engine)
+        factory = sessionmaker(bind=isolated_engine)
+        def isolated_db():
+            with factory() as db: yield db
+        app.dependency_overrides[get_db] = isolated_db
+        try:
+            with patch.dict(os.environ, {'OWNER_EMAIL': ''}):
+                self.assertTrue(self.client.get('/api/auth/config').json()['registration_enabled'])
+                payload = {'email': 'mine@example.com', 'password': 'test-password-123'}
+                self.assertEqual(self.client.post('/api/auth/register', json={**payload, 'password': 'short'}).status_code, 422)
+                self.assertEqual(self.client.post('/api/auth/register', json={**payload, 'email': 'invalid'}).status_code, 422)
+                self.assertEqual(self.client.post('/api/auth/register', json={**payload, 'password': 'é'*40}).status_code, 422)
+                result = self.client.post('/api/auth/register', json=payload)
+                self.assertEqual(result.status_code, 200)
+                token = result.json()['access_token']
+                self.assertEqual(self.client.get('/api/auth/me', headers={'Authorization': f'Bearer {token}'}).json()['email'], 'mine@example.com')
+                self.assertEqual(self.client.post('/api/auth/register', json={**payload, 'email': 'MINE@example.com'}).status_code, 409)
+                self.assertEqual(self.client.post('/api/auth/login', data={'username': 'MINE@example.com', 'password': payload['password']}).status_code, 200)
+                self.assertEqual(self.client.post('/api/auth/login', data={'username': 'mine@example.com', 'password': 'incorrect'}).status_code, 401)
+                second = self.client.post('/api/auth/register', json={**payload, 'email': 'second@example.com'})
+                self.assertEqual(second.status_code, 200)
+                self.assertEqual(self.client.post('/api/auth/login', data={'username': 'second@example.com', 'password': payload['password']}).status_code, 200)
+                first_headers = {'Authorization': f'Bearer {token}'}
+                second_headers = {'Authorization': f"Bearer {second.json()['access_token']}"}
+                self.client.post('/api/body-stats', headers=first_headers, json={'date': str(today()), 'weight': 75})
+                routine = self.client.post('/api/routines', headers=first_headers, json={'name': 'Private'}).json()
+                self.client.put('/api/profile', headers=first_headers, json={'goal_weight': 70})
+                self.assertEqual(self.client.get('/api/body-stats', headers=second_headers).json(), [])
+                self.assertEqual(self.client.get('/api/routines', headers=second_headers).json(), [])
+                self.assertEqual(self.client.get(f"/api/routines/{routine['id']}", headers=second_headers).status_code, 404)
+                self.assertEqual(self.client.delete(f"/api/routines/{routine['id']}", headers=second_headers).status_code, 404)
+                self.assertIsNone(self.client.get('/api/profile', headers=second_headers).json())
+                workout = self.client.post(f"/api/routines/{routine['id']}/workouts", headers=first_headers, json={'name': 'Private day', 'exercises': []}).json()
+                session = self.client.post('/api/sessions', headers=first_headers, json={'workout_id': workout['id']}).json()
+                self.assertEqual(self.client.post('/api/sessions', headers=second_headers, json={'workout_id': workout['id']}).status_code, 404)
+                self.assertEqual(self.client.post(f"/api/sessions/{session['id']}/finish", headers=second_headers).status_code, 404)
+                self.assertEqual(self.client.get('/api/sessions', headers=second_headers).json(), [])
+                with patch('app.routers.auth.REGISTRATION_ENABLED', False):
+                    self.assertEqual(self.client.post('/api/auth/register', json={**payload, 'email': 'closed@example.com'}).status_code, 403)
+                with factory() as db:
+                    self.assertNotEqual(db.query(User).filter_by(email='mine@example.com').first().password_hash, payload['password'])
+        finally:
+            app.dependency_overrides.pop(get_db, None)
+            isolated_engine.dispose()
 
 if __name__ == '__main__': unittest.main()
