@@ -1,81 +1,68 @@
-import type { CSSProperties } from 'react';
 import { useEffect, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { api } from '../api';
 import { useApi } from '../hooks/useApi';
-import { useIsMobile } from '../hooks/useIsMobile';
 import type { Exercise, Routine, Workout, WorkoutExerciseEntry } from '../types';
-import { loadPriorities, savePriorities, type PriorityMap } from '../utils/musclePriority';
-import { computeMuscleVolumeRows, type MuscleVolumeRow } from '../utils/volumeGuideline';
-import { useLanguage } from '../i18n/LanguageContext';
+import type { MuscleVolumeRow } from '../utils/volumeGuideline';
+import { analysePlan, KIND_LABEL, redundantPairs, type PlanWarning, type WarningKind } from '../utils/planAnalysis';
 import MuscleExercisePicker from '../components/MuscleExercisePicker';
-import { DAY_TYPES, UPPER_MUSCLES, LOWER_MUSCLES } from '../data/routineTemplates';
+import WeekBoard, { type BoardItem } from '../components/WeekBoard';
+import { DAY_TYPES } from '../data/routineTemplates';
 import { targetFor } from '../data/muscleVolumeTargets';
+import { jointActionName, muscleName, planeName, plural, WEEKDAYS } from '../data/labels';
 
-interface RedundancyFlag {
-  withName: string;
-  jointAction: string;
-  plane: string | null;
-}
+const DAY_TYPE_LABELS: Record<string, string> = { upper: 'Upper', lower: 'Lower', push: 'Push', pull: 'Pull', legs: 'Legs', full_body: 'Full Body', custom: 'Otro' };
 
-// Flags exercises in the same workout that share both muscle and joint action - the
-// manual's definition of redundancy (same muscle through a very similar movement).
-function findRedundant(exercises: WorkoutExerciseEntry[]): Map<number, RedundancyFlag> {
-  const flagged = new Map<number, RedundancyFlag>();
-  for (let i = 0; i < exercises.length; i++) {
-    for (let j = 0; j < exercises.length; j++) {
-      if (i === j) continue;
-      const a = exercises[i];
-      const b = exercises[j];
-      if (a.muscle === b.muscle && a.joint_action && a.joint_action === b.joint_action && !flagged.has(a.exercise_id)) {
-        flagged.set(a.exercise_id, { withName: b.name, jointAction: a.joint_action, plane: a.plane });
-      }
-    }
-  }
-  return flagged;
-}
-
-const TABLE_COLUMNS = '18px 22px 1.8fr 56px 96px 52px 60px 22px';
-
-function RedundancyIcon({ flag }: { flag: RedundancyFlag }) {
+// Alternatives for one slot. "Equivalente" = same muscle, same joint action and same
+// plane, so the swap keeps the stimulus; the rest of the muscle's exercises are offered
+// separately because they change what the slot trains.
+function SwapPanel({ slot, inDay, exercises, onPick, onClose }: { slot: WorkoutExerciseEntry; inDay: Set<number>; exercises: Exercise[]; onPick: (ex: Exercise) => void; onClose: () => void }) {
+  const [showOthers, setShowOthers] = useState(false);
+  const sameMuscle = exercises.filter(e => e.muscle === slot.muscle && e.id !== slot.exercise_id);
+  const exact = sameMuscle.filter(e => e.joint_action === slot.joint_action && e.plane === slot.plane);
+  const others = sameMuscle.filter(e => !exact.includes(e));
+  const option = (e: Exercise) => (
+    <button key={e.id} className="swap-option" disabled={inDay.has(e.id)} onClick={() => onPick(e)}>
+      <strong>{e.name}</strong>
+      <span>{e.equipment || '—'} · {jointActionName(e.joint_action)} · plano {planeName(e.plane)}{inDay.has(e.id) ? ' · ya está en este día' : ''}</span>
+    </button>
+  );
   return (
-    <span
-      title={`Redundant with "${flag.withName}" — both hit ${flag.jointAction}${flag.plane ? ` (${flag.plane})` : ''}. They compete for the same recovery instead of adding new stimulus — swap one for a different joint action, or drop it and add its sets to the other.`}
-      style={{ color: 'var(--accent)', cursor: 'help', fontSize: 12 }}
-    >
-      ⚠
-    </span>
+    <div className="swap-panel">
+      <div className="swap-head">
+        <div><strong>Cambiar {slot.name}</strong><span>Se mantienen series, reps, RIR, descanso y posición. Las series que ya registraste quedan en el historial del ejercicio anterior.</span></div>
+        <button className="quiet-button" onClick={onClose}>Cerrar</button>
+      </div>
+      <p className="swap-label">Equivalentes · {muscleName(slot.muscle).toLowerCase()}, {jointActionName(slot.joint_action)}, plano {planeName(slot.plane)}</p>
+      {exact.length ? <div className="swap-list">{exact.map(option)}</div> : <p className="helper-text">No hay otro ejercicio con el mismo músculo, acción y plano en la biblioteca.</p>}
+      {others.length > 0 && <>
+        <button className="link-button" onClick={() => setShowOthers(v => !v)}>{showOthers ? 'Ocultar' : 'Ver'} otros ejercicios de {muscleName(slot.muscle).toLowerCase()} ({others.length}) · cambian el estímulo</button>
+        {showOthers && <div className="swap-list">{others.map(option)}</div>}
+      </>}
+    </div>
   );
 }
 
-function WorkoutCard({
-  workout,
-  priorities,
-  volumeByMuscle,
-  highlightMuscle,
-  onChanged,
-  onDeleted,
-}: {
+function WorkoutCard({ workout, exercisesLibrary, volumeByMuscle, highlightMuscle, onChanged, onDeleted }: {
   workout: Workout;
-  priorities: PriorityMap;
+  exercisesLibrary: Exercise[];
   volumeByMuscle: Map<string, MuscleVolumeRow>;
   highlightMuscle: string | null;
   onChanged: () => void;
   onDeleted: () => void;
 }) {
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [swapping, setSwapping] = useState<number | null>(null);
   const [editingName, setEditingName] = useState(false);
   const [nameDraft, setNameDraft] = useState(workout.name);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
-  // Local copy is the source of truth for rendering: PUT round-trips are debounced,
-  // so if edits to two cells in the same row fired straight off `workout.exercises`
-  // they'd race and the slower one would overwrite the faster one's change. Only
-  // resyncs on a genuine day switch, not on every parent reload, so an in-flight
-  // edit here never gets clobbered by a reload triggered elsewhere on the page.
+  const [error, setError] = useState('');
+  // Local copy is the source of truth for rendering: PUTs are debounced, so editing two
+  // cells from `workout.exercises` would race. It resyncs only on a genuine day switch.
   const [exercises, setExercises] = useState<WorkoutExerciseEntry[]>(workout.exercises);
   const saveTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const isMobile = useIsMobile();
-  const redundant = findRedundant(exercises);
+  const pending = useRef<WorkoutExerciseEntry[] | null>(null);
+  const redundant = redundantPairs(exercises);
 
   useEffect(() => {
     setExercises(workout.exercises);
@@ -83,33 +70,33 @@ function WorkoutCard({
   }, [workout.id]);
 
   async function persist(list: WorkoutExerciseEntry[], name: string = workout.name) {
-    await api.put(`/api/workouts/${workout.id}`, {
-      name,
-      day_index: workout.day_index ?? 0,
-      exercises: list.map((e, i) => ({
-        exercise_id: e.exercise_id,
-        order_index: i,
-        target_sets: e.target_sets,
-        rep_range_min: e.rep_range_min,
-        rep_range_max: e.rep_range_max,
-        rir_target: e.rir_target,
-        rest_seconds: e.rest_seconds,
-        comments: e.comments,
-      })),
-    });
-    onChanged();
+    pending.current = null;
+    setError('');
+    try {
+      await api.put(`/api/workouts/${workout.id}`, {
+        name,
+        day_index: workout.day_index ?? 0,
+        exercises: list.map((e, i) => ({ exercise_id: e.exercise_id, order_index: i, target_sets: e.target_sets, rep_range_min: e.rep_range_min, rep_range_max: e.rep_range_max, rir_target: e.rir_target, rest_seconds: e.rest_seconds, comments: e.comments })),
+      });
+      onChanged();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No se pudo guardar.');
+    }
+  }
+
+  async function flush() {
+    if (saveTimeout.current) { clearTimeout(saveTimeout.current); saveTimeout.current = null; }
+    if (pending.current) await persist(pending.current);
   }
 
   function persistNow(list: WorkoutExerciseEntry[], name?: string) {
-    if (saveTimeout.current) {
-      clearTimeout(saveTimeout.current);
-      saveTimeout.current = null;
-    }
+    if (saveTimeout.current) { clearTimeout(saveTimeout.current); saveTimeout.current = null; }
     persist(list, name);
   }
 
   function persistDebounced(list: WorkoutExerciseEntry[]) {
     if (saveTimeout.current) clearTimeout(saveTimeout.current);
+    pending.current = list;
     saveTimeout.current = setTimeout(() => persist(list), 500);
   }
 
@@ -120,54 +107,43 @@ function WorkoutCard({
   }
 
   function addExercise(ex: Exercise) {
-    const next: WorkoutExerciseEntry[] = [
-      ...exercises,
-      {
-        id: -1,
-        order_index: exercises.length,
-        target_sets: 3,
-        rep_range_min: 8,
-        rep_range_max: 12,
-        rir_target: 2,
-        rest_seconds: 90,
-        comments: null,
-        exercise_id: ex.id,
-        name: ex.name,
-        equipment: ex.equipment,
-        muscle: ex.muscle,
-        joint_action: ex.joint_action,
-        plane: ex.plane,
-      },
-    ];
+    if (exercises.some(e => e.exercise_id === ex.id)) { setError(`${ex.name} ya está en este día.`); return; }
+    const next: WorkoutExerciseEntry[] = [...exercises, { id: -1, order_index: exercises.length, target_sets: 3, rep_range_min: 8, rep_range_max: 12, rir_target: 2, rest_seconds: 120, comments: null, exercise_id: ex.id, name: ex.name, equipment: ex.equipment, muscle: ex.muscle, joint_action: ex.joint_action, plane: ex.plane }];
     setExercises(next);
     persistNow(next);
     setPickerOpen(false);
   }
 
+  async function swap(slot: WorkoutExerciseEntry, ex: Exercise) {
+    setError('');
+    try {
+      await flush();
+      // A just-added exercise has no server id until the routine reloads.
+      const id = slot.id > 0 ? slot.id : (await api.get<Routine[]>('/api/routines')).flatMap(r => r.workouts).find(w => w.id === workout.id)?.exercises.find(e => e.exercise_id === slot.exercise_id)?.id;
+      if (!id) throw new Error('Guarda el día e inténtalo de nuevo.');
+      const updated = await api.post<Workout>(`/api/workout-exercises/${id}/swap`, { exercise_id: ex.id });
+      setExercises(updated.exercises);
+      setSwapping(null);
+      onChanged();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No se pudo cambiar el ejercicio.');
+    }
+  }
+
   function removeExercise(exerciseId: number) {
-    const next = exercises.filter((e) => e.exercise_id !== exerciseId);
+    const next = exercises.filter(e => e.exercise_id !== exerciseId);
     setExercises(next);
     persistNow(next);
   }
 
   function updateField(exerciseId: number, field: keyof WorkoutExerciseEntry, value: number | null) {
-    const next = exercises.map((e) => (e.exercise_id === exerciseId ? { ...e, [field]: value } : e));
+    const next = exercises.map(e => (e.exercise_id === exerciseId ? { ...e, [field]: value } : e));
     setExercises(next);
     persistDebounced(next);
   }
 
-  function reorderByPriority() {
-    const rank = (m: string) => priorities[m] ?? 2;
-    const sorted = [...exercises].sort((a, b) => rank(a.muscle) - rank(b.muscle));
-    setExercises(sorted);
-    persistNow(sorted);
-  }
-
   function handleDrop(targetIndex: number) {
-    if (dragIndex === null || dragIndex === targetIndex) {
-      setDragIndex(null);
-      return;
-    }
+    if (dragIndex === null || dragIndex === targetIndex) { setDragIndex(null); return; }
     const next = [...exercises];
     const [moved] = next.splice(dragIndex, 1);
     next.splice(targetIndex, 0, moved);
@@ -177,669 +153,219 @@ function WorkoutCard({
   }
 
   async function deleteWorkout() {
-    if (!window.confirm(`Delete "${workout.name}"? This removes its exercises and logged sessions too.`)) return;
+    if (!window.confirm(`¿Eliminar «${workout.name}»? Se borran sus ejercicios y las sesiones registradas de este día.`)) return;
     await api.delete(`/api/workouts/${workout.id}`);
     onDeleted();
   }
 
-  const hasPriorityData = exercises.some((e) => priorities[e.muscle] != null);
-
-  function numberCell(value: number | null, onSave: (v: number | null) => void, width: number, title: string) {
-    return (
-      <input
-        type="number"
-        value={value ?? ''}
-        title={title}
-        onChange={(e) => onSave(e.target.value === '' ? null : Number(e.target.value))}
-        style={{ width, padding: '6px 8px', textAlign: 'center' }}
-      />
-    );
+  function numberCell(value: number | null, field: keyof WorkoutExerciseEntry, exerciseId: number, label: string) {
+    return <input type="number" inputMode="numeric" aria-label={label} value={value ?? ''} onChange={e => updateField(exerciseId, field, e.target.value === '' ? null : Number(e.target.value))} />;
   }
 
+  const inDay = new Set(exercises.map(e => e.exercise_id));
+  const totalSets = exercises.reduce((n, e) => n + (e.target_sets || 0), 0);
+
   return (
-    <div className="card">
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        {editingName ? (
-          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-            <input
-              type="text"
-              value={nameDraft}
-              autoFocus
-              onChange={(e) => setNameDraft(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && renameWorkout()}
-              style={{ font: "500 14px/1 'Inter Tight', sans-serif", width: 180 }}
-            />
-            <button className="btn-ghost" onClick={renameWorkout}>
-              Save
-            </button>
-          </div>
-        ) : (
-          <span
-            onClick={() => {
-              setNameDraft(workout.name);
-              setEditingName(true);
-            }}
-            title="Click to rename"
-            style={{ font: "500 16px/1.2 'Inter Tight', sans-serif", color: 'var(--text-strong)', cursor: 'text' }}
-          >
-            {workout.name} <span style={{ font: "400 11px/1 'Inter', sans-serif", color: 'var(--text-dim)' }}>✎</span>
-          </span>
-        )}
-        <div style={{ display: 'flex', gap: 8 }}>
-          {hasPriorityData && (
-            <button className="btn-ghost" onClick={reorderByPriority} title="Move priority-1 muscles earlier in the session">
-              Sort by priority
-            </button>
-          )}
-          <button
-            onClick={deleteWorkout}
-            title="Delete this workout day"
-            style={{ border: 'none', background: 'transparent', color: 'var(--text-dim)', fontSize: 13, padding: '6px 8px' }}
-          >
-            Delete
-          </button>
+    <section className="panel day-card" id={`day-${workout.id}`}>
+      <div className="day-card-head">
+        <div>
+          <span className="day-when">{workout.weekday != null ? WEEKDAYS[workout.weekday] : 'Sin día fijo'}</span>
+          {editingName
+            ? <span className="rename"><input value={nameDraft} autoFocus onChange={e => setNameDraft(e.target.value)} onKeyDown={e => e.key === 'Enter' && renameWorkout()} onBlur={renameWorkout} aria-label="Nombre del día" /></span>
+            : <h2><button className="title-button" onClick={() => { setNameDraft(workout.name); setEditingName(true); }} title="Renombrar">{workout.name}</button></h2>}
+          <p className="helper-text">{plural(exercises.length, "ejercicio", "ejercicios")} · {plural(totalSets, "serie", "series")}</p>
+        </div>
+        <div className="routine-actions">
+          <Link className="btn-ghost" to={`/app/session/${workout.id}`}>Entrenar</Link>
+          <button className="quiet-button" onClick={deleteWorkout}>Eliminar</button>
         </div>
       </div>
 
-      {!isMobile && exercises.length > 0 && (
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: TABLE_COLUMNS,
-            gap: 8,
-            font: "500 10px/1 'Inter', sans-serif",
-            color: 'var(--text-dim)',
-            textTransform: 'uppercase',
-            letterSpacing: '.03em',
-            paddingBottom: 6,
-            borderBottom: '1px solid var(--border)',
-          }}
-        >
-          <span />
-          <span />
-          <span>Exercise</span>
-          <span style={{ textAlign: 'center' }}>Sets</span>
-          <span style={{ textAlign: 'center' }}>Reps</span>
-          <span style={{ textAlign: 'center' }}>RIR</span>
-          <span style={{ textAlign: 'center' }}>Rest</span>
-          <span />
-        </div>
-      )}
-
-      <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? 8 : 2 }}>
-        {exercises.map((ex, i) => {
-          const guideline = volumeByMuscle.get(ex.muscle);
-          const flag = redundant.get(ex.exercise_id);
-          const highlighted = highlightMuscle != null && ex.muscle === highlightMuscle;
-          const rowStyle: CSSProperties = {
-            background: highlighted ? 'var(--hover-bg)' : 'transparent',
-            transition: 'background 0.6s ease',
-            borderRadius: 6,
-          };
-
-          if (isMobile) {
-            return (
-              <div
-                key={ex.exercise_id}
-                data-muscle={ex.muscle}
-                style={{
-                  ...rowStyle,
-                  background: highlighted ? 'var(--hover-bg)' : 'var(--bg-raised)',
-                  border: '1px solid var(--border)',
-                  padding: '10px 12px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: 6,
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                  <Link
-                    to={`/app/exercises/${ex.exercise_id}/progress`}
-                    style={{ font: "500 14px/1.2 'Inter Tight', sans-serif", color: 'var(--text-strong)' }}
-                  >
-                    {ex.name}
-                  </Link>
-                  {flag && <RedundancyIcon flag={flag} />}
-                  <span
-                    onClick={() => removeExercise(ex.exercise_id)}
-                    style={{ color: 'var(--text-dim)', cursor: 'pointer', fontSize: 12, marginLeft: 'auto' }}
-                  >
-                    Remove
-                  </span>
-                </div>
-                <span style={{ font: "400 11px/1.3 'Inter', sans-serif", color: 'var(--text-dim)' }}>
-                  {ex.muscle.replace('_', ' ')} · {ex.joint_action || '—'}
-                  {guideline?.target != null && ` · target ${guideline.target}${guideline.isFloor ? '+' : ''}/wk`}
-                </span>
-                <div style={{ display: 'flex', gap: 14, alignItems: 'center', flexWrap: 'wrap' }}>
-                  <label style={{ display: 'flex', flexDirection: 'column', gap: 2, font: "400 10px/1 'Inter', sans-serif", color: 'var(--text-dim)' }}>
-                    Sets
-                    {numberCell(ex.target_sets, (v) => updateField(ex.exercise_id, 'target_sets', v), 48, 'Target sets')}
-                  </label>
-                  <label style={{ display: 'flex', flexDirection: 'column', gap: 2, font: "400 10px/1 'Inter', sans-serif", color: 'var(--text-dim)' }}>
-                    Reps min
-                    {numberCell(ex.rep_range_min, (v) => updateField(ex.exercise_id, 'rep_range_min', v), 48, 'Rep range min')}
-                  </label>
-                  <label style={{ display: 'flex', flexDirection: 'column', gap: 2, font: "400 10px/1 'Inter', sans-serif", color: 'var(--text-dim)' }}>
-                    Reps max
-                    {numberCell(ex.rep_range_max, (v) => updateField(ex.exercise_id, 'rep_range_max', v), 48, 'Rep range max')}
-                  </label>
-                  <label style={{ display: 'flex', flexDirection: 'column', gap: 2, font: "400 10px/1 'Inter', sans-serif", color: 'var(--text-dim)' }}>
-                    RIR
-                    {numberCell(ex.rir_target, (v) => updateField(ex.exercise_id, 'rir_target', v), 40, 'Target RIR')}
-                  </label>
-                  <label style={{ display: 'flex', flexDirection: 'column', gap: 2, font: "400 10px/1 'Inter', sans-serif", color: 'var(--text-dim)' }}>
-                    Rest (s)
-                    {numberCell(ex.rest_seconds, (v) => updateField(ex.exercise_id, 'rest_seconds', v), 52, 'Rest, in seconds')}
-                  </label>
-                </div>
-              </div>
-            );
-          }
-
-          return (
+      {exercises.length > 0 && <div className="ex-row ex-head" aria-hidden="true"><span /><span /><span>Ejercicio</span><span>Series</span><span>Reps</span><span>RIR</span><span>Desc. s</span><span /></div>}
+      {exercises.map((ex, i) => {
+        const guideline = volumeByMuscle.get(ex.muscle);
+        const pair = redundant.get(ex.exercise_id);
+        return (
+          <div key={ex.exercise_id}>
             <div
-              key={ex.exercise_id}
+              className={`ex-row${highlightMuscle === ex.muscle ? ' highlighted' : ''}${dragIndex === i ? ' dragging' : ''}`}
               draggable
               onDragStart={() => setDragIndex(i)}
-              onDragOver={(e) => e.preventDefault()}
+              onDragOver={e => e.preventDefault()}
               onDrop={() => handleDrop(i)}
-              data-muscle={ex.muscle}
-              style={{
-                ...rowStyle,
-                display: 'grid',
-                gridTemplateColumns: TABLE_COLUMNS,
-                gap: 8,
-                alignItems: 'center',
-                padding: '6px 0',
-              }}
             >
-              <span title="Drag to reorder" style={{ cursor: 'grab', color: 'var(--text-faint)', fontSize: 13 }}>
-                ⠿
-              </span>
-              <span style={{ font: "600 12px/1 'Inter Tight', sans-serif", color: 'var(--text-dim)' }}>{i + 1}</span>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
-                <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <Link
-                    to={`/app/exercises/${ex.exercise_id}/progress`}
-                    style={{ font: "500 13.5px/1.2 'Inter Tight', sans-serif", color: 'var(--text-strong)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
-                  >
-                    {ex.name}
-                  </Link>
-                  {flag && <RedundancyIcon flag={flag} />}
-                </span>
-                <span style={{ font: "400 11px/1.3 'Inter', sans-serif", color: 'var(--text-dim)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {ex.muscle.replace('_', ' ')} · {ex.joint_action || '—'}
-                  {priorities[ex.muscle] != null && ` · priority ${priorities[ex.muscle]}`}
-                  {guideline?.target != null && ` · target ${guideline.target}${guideline.isFloor ? '+' : ''}/wk`}
-                </span>
+              <span className="drag-handle" title="Arrastra para reordenar">⠿</span>
+              <span className="ex-index">{i + 1}</span>
+              <div className="ex-name">
+                <Link to={`/app/exercises/${ex.exercise_id}/progress`}>{ex.name}</Link>
+                <span>{muscleName(ex.muscle)} · {jointActionName(ex.joint_action)}{guideline?.target != null && guideline.target > 0 ? ` · objetivo ${guideline.target}${guideline.isFloor ? '+' : ''} series/sem` : ''}</span>
+                {pair && <span className="ex-flag">Redundante con {pair.other}: mismo músculo y misma acción. <button className="link-button" onClick={() => setSwapping(ex.exercise_id)}>Cambiar uno</button></span>}
               </div>
-              {numberCell(ex.target_sets, (v) => updateField(ex.exercise_id, 'target_sets', v), 44, 'Target sets')}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 3, justifyContent: 'center' }}>
-                {numberCell(ex.rep_range_min, (v) => updateField(ex.exercise_id, 'rep_range_min', v), 38, 'Rep range min')}
-                <span style={{ color: 'var(--text-faint)', fontSize: 11 }}>–</span>
-                {numberCell(ex.rep_range_max, (v) => updateField(ex.exercise_id, 'rep_range_max', v), 38, 'Rep range max')}
-              </div>
-              {numberCell(ex.rir_target, (v) => updateField(ex.exercise_id, 'rir_target', v), 40, 'Target RIR')}
-              {numberCell(ex.rest_seconds, (v) => updateField(ex.exercise_id, 'rest_seconds', v), 48, 'Rest, in seconds')}
-              <span
-                onClick={() => removeExercise(ex.exercise_id)}
-                title="Remove"
-                style={{ color: 'var(--text-dim)', cursor: 'pointer', fontSize: 14, textAlign: 'center' }}
-              >
-                ×
+              <label className="ex-num"><small>Series</small>{numberCell(ex.target_sets, 'target_sets', ex.exercise_id, 'Series')}</label>
+              <label className="ex-num reps"><small>Reps</small>{numberCell(ex.rep_range_min, 'rep_range_min', ex.exercise_id, 'Reps mínimo')}<i>–</i>{numberCell(ex.rep_range_max, 'rep_range_max', ex.exercise_id, 'Reps máximo')}</label>
+              <label className="ex-num"><small>RIR</small>{numberCell(ex.rir_target, 'rir_target', ex.exercise_id, 'RIR objetivo')}</label>
+              <label className="ex-num"><small>Desc. s</small>{numberCell(ex.rest_seconds, 'rest_seconds', ex.exercise_id, 'Descanso en segundos')}</label>
+              <span className="ex-actions">
+                <button className="chip-button" onClick={() => setSwapping(swapping === ex.exercise_id ? null : ex.exercise_id)} aria-expanded={swapping === ex.exercise_id}>Cambiar</button>
+                <button className="icon-button" onClick={() => removeExercise(ex.exercise_id)} aria-label={`Quitar ${ex.name}`} title="Quitar">×</button>
               </span>
             </div>
-          );
-        })}
-        {exercises.length === 0 && <span className="spinner-text">No exercises yet.</span>}
-
-        <div
-          onClick={() => setPickerOpen((v) => !v)}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8,
-            padding: '10px 4px',
-            marginTop: 4,
-            borderTop: exercises.length > 0 ? '1px solid var(--border)' : 'none',
-            cursor: 'pointer',
-            color: 'var(--accent)',
-            font: "600 12.5px/1 'Inter Tight', sans-serif",
-          }}
-        >
-          {pickerOpen ? '− Close' : '+ Add exercise'}
-        </div>
-      </div>
-
-      {pickerOpen && <MuscleExercisePicker onPick={addExercise} />}
-    </div>
-  );
-}
-
-// Forces a real ranking instead of letting every muscle end up "3" (which isn't a
-// priority at all) - each section caps how many muscles can be marked weak-point (1)
-// or strong-point (3), scaled to roughly a quarter of that section's muscle count.
-function priorityCap(sectionSize: number): number {
-  return Math.max(1, Math.ceil(sectionSize / 4));
-}
-
-function MusclePrioritySection({
-  title,
-  muscles,
-  priorities,
-  onSet,
-  onClear,
-}: {
-  title: string;
-  muscles: string[];
-  priorities: PriorityMap;
-  onSet: (m: string, r: 1 | 2 | 3) => void;
-  onClear: (m: string) => void;
-}) {
-  if (muscles.length === 0) return null;
-  const cap = priorityCap(muscles.length);
-  const count = (r: 1 | 2 | 3) => muscles.filter((m) => priorities[m] === r).length;
-  const count1 = count(1);
-  const count3 = count(3);
-
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-      <span style={{ font: "600 11px/1 'Inter Tight', sans-serif", color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '.04em' }}>
-        {title} · weak points {count1}/{cap} · strong points {count3}/{cap}
-      </span>
-      {muscles.map((m) => {
-        const current = priorities[m];
-        return (
-          <div key={m} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <span style={{ width: 140, font: "400 13px/1 'Inter', sans-serif", color: 'var(--text-body)' }}>
-              {m.replace('_', ' ')}
-            </span>
-            <div style={{ display: 'flex', gap: 4 }}>
-              {([1, 2, 3] as const).map((r) => {
-                const active = current === r;
-                const capped = (r === 1 || r === 3) && !active && count(r) >= cap;
-                return (
-                  <button
-                    key={r}
-                    disabled={capped}
-                    onClick={() => (active ? onClear(m) : onSet(m, r))}
-                    title={capped ? `Only ${cap} muscle${cap === 1 ? '' : 's'} can be marked ${r === 1 ? 'weak' : 'strong'} in this section` : undefined}
-                    style={{
-                      border: '1px solid var(--border2)',
-                      background: active ? 'var(--accent)' : 'transparent',
-                      color: active ? 'var(--accent-text)' : 'var(--nav-inactive)',
-                      opacity: capped ? 0.35 : 1,
-                      width: 30,
-                      height: 30,
-                      borderRadius: 6,
-                      font: "600 12px/1 'Inter Tight', sans-serif",
-                      cursor: capped ? 'not-allowed' : 'pointer',
-                    }}
-                  >
-                    {r}
-                  </button>
-                );
-              })}
-            </div>
+            {swapping === ex.exercise_id && <SwapPanel slot={ex} inDay={inDay} exercises={exercisesLibrary} onPick={choice => swap(ex, choice)} onClose={() => setSwapping(null)} />}
           </div>
         );
       })}
+      {!exercises.length && <p className="helper-text">Este día no tiene ejercicios.</p>}
+      {error && <p className="error-text" role="alert">{error}</p>}
+      <button className="add-row" onClick={() => setPickerOpen(v => !v)}>{pickerOpen ? '− Cerrar' : '+ Agregar ejercicio'}</button>
+      {pickerOpen && <MuscleExercisePicker onPick={addExercise} />}
+    </section>
+  );
+}
+
+function NewDayForm({ onAdd, onCancel }: { onAdd: (name: string) => void; onCancel: () => void }) {
+  const [key, setKey] = useState(DAY_TYPES[0].key);
+  const [custom, setCustom] = useState('');
+  const dayType = DAY_TYPES.find(d => d.key === key)!;
+  const isCustom = key === 'custom';
+  const name = isCustom ? custom.trim() : dayType.label;
+  const muscles = dayType.muscles.filter(m => (targetFor(m)?.weeklySets ?? 0) > 0);
+  return (
+    <div className="new-day">
+      <div className="chip-row">{DAY_TYPES.map(d => <button key={d.key} className={`chip${key === d.key ? ' active' : ''}`} aria-pressed={key === d.key} onClick={() => setKey(d.key)}>{DAY_TYPE_LABELS[d.key] || d.label}</button>)}</div>
+      {!isCustom && <p className="helper-text">Trabaja: {muscles.map(muscleName).join(', ')}.</p>}
+      <div className="new-day-actions">
+        {isCustom && <input value={custom} placeholder="Nombre, p. ej. Brazos" onChange={e => setCustom(e.target.value)} onKeyDown={e => e.key === 'Enter' && name && onAdd(name)} autoFocus />}
+        <button className="btn-primary" disabled={!name} onClick={() => onAdd(name)}>Agregar {isCustom ? 'día' : dayType.label}</button>
+        <button className="btn-ghost" onClick={onCancel}>Cancelar</button>
+      </div>
+      <p className="helper-text">El día nuevo aparece en «Sin día». Arrástralo a la semana.</p>
     </div>
   );
 }
 
-function MusclePriorityCard({
-  upperMuscles,
-  lowerMuscles,
-  priorities,
-  onSet,
-  onClear,
-}: {
-  upperMuscles: string[];
-  lowerMuscles: string[];
-  priorities: PriorityMap;
-  onSet: (m: string, r: 1 | 2 | 3) => void;
-  onClear: (m: string) => void;
-}) {
-  if (upperMuscles.length === 0 && lowerMuscles.length === 0) return null;
+const STATUS_LABEL: Record<MuscleVolumeRow['status'], string> = { missing: 'Sin trabajo', low: 'Bajo', ok: 'Bien', high: 'Alto' };
+
+function MuscleSummary({ rows, selected, onSelect }: { rows: MuscleVolumeRow[]; selected: string | null; onSelect: (m: string | null) => void }) {
   return (
-    <div className="card">
-      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
-        <span className="label">Muscle priorities</span>
-        <span style={{ font: "400 11px/1 'Inter', sans-serif", color: 'var(--text-dim)' }}>
-          1 = weak point (train first) · 3 = strong point (train last) — capped per section so it stays a real ranking
-        </span>
-      </div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
-        <MusclePrioritySection title="Upper body" muscles={upperMuscles} priorities={priorities} onSet={onSet} onClear={onClear} />
-        <MusclePrioritySection title="Lower body" muscles={lowerMuscles} priorities={priorities} onSet={onSet} onClear={onClear} />
-      </div>
-    </div>
+    <details className="panel muscle-summary">
+      <summary><h2>Resumen por músculo</h2><span className="helper-text">Series y días por semana frente a tu objetivo</span></summary>
+      <div className="table-scroll"><table className="read-table">
+        <thead><tr><th>Músculo</th><th>Días/sem</th><th>Series/sem</th><th>Objetivo</th><th>Estado</th></tr></thead>
+        <tbody>{rows.filter(r => r.target !== 0 || r.weeklySets > 0).map(r => (
+          <tr key={r.muscle} className={`clickable${selected === r.muscle ? ' selected' : ''}`} onClick={() => onSelect(selected === r.muscle ? null : r.muscle)}>
+            <th>{muscleName(r.muscle)}</th><td>{r.frequency}</td><td>{r.weeklySets}</td><td>{r.target != null ? `${r.target}${r.isFloor ? '+' : ''}` : '—'}</td><td><span className={`status-pill s-${r.status}`}>{STATUS_LABEL[r.status]}</span></td>
+          </tr>
+        ))}</tbody>
+      </table></div>
+    </details>
   );
 }
 
-const STATUS_LABEL: Record<MuscleVolumeRow['status'], string> = {
-  missing: 'Not trained',
-  low: 'Low',
-  ok: 'On track',
-  high: 'High',
-};
-
-function explainStatus(r: MuscleVolumeRow): string {
-  if (r.target == null) {
-    return `No target set for this muscle yet — ${r.weeklySets} sets/week logged.`;
-  }
-  const targetText = `${r.target}${r.isFloor ? '+' : ''} sets/week`;
-  if (r.status === 'missing') {
-    return `Nothing is training this muscle at all. Your program targets ${targetText} for it.`;
-  }
-  if (r.status === 'low') {
-    return `Your program targets ${targetText} for this muscle — ${r.weeklySets} is meaningfully below that, so it's under-stimulated relative to your own plan.`;
-  }
-  if (r.status === 'high') {
-    return `Your program targets ${targetText} for this muscle — ${r.weeklySets} sets is well past that, adding fatigue without much extra growth signal.`;
-  }
-  return `Your program targets ${targetText} for this muscle — ${r.weeklySets} sets is close enough to that. No change needed.`;
-}
-
-const STATUS_COLOR: Record<MuscleVolumeRow['status'], string> = {
-  missing: 'var(--accent)',
-  low: 'var(--danger)',
-  ok: 'var(--text-dim)',
-  high: 'var(--accent)',
-};
-
-function VolumeFrequencyCard({
-  rows,
-  selectedMuscle,
-  onSelectMuscle,
-}: {
-  rows: MuscleVolumeRow[];
-  selectedMuscle: string | null;
-  onSelectMuscle: (muscle: string | null) => void;
-}) {
-  if (rows.length === 0) return null;
-
-  const missingCount = rows.filter((r) => r.status === 'missing').length;
-
+function Warnings({ warnings, onFocus }: { warnings: PlanWarning[]; onFocus: (w: PlanWarning) => void }) {
+  const kinds = (Object.keys(KIND_LABEL) as WarningKind[]).filter(k => warnings.some(w => w.kind === k));
+  if (!warnings.length) return <section className="panel warnings ok"><h2>Avisos</h2><p className="helper-text">Sin problemas: volumen, frecuencia, recuperación y ejercicios repetidos están en orden.</p></section>;
   return (
-    <div className="card">
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-        <span className="label">Volume & frequency check</span>
-        <span style={{ font: "400 11.5px/1.4 'Inter', sans-serif", color: 'var(--text-dim)' }}>
-          How many hard sets a muscle can grow from — and recover from — depends on how often it's trained per week; that
-          trade-off between volume and frequency is long-standing, widely-cited resistance-training guidance, not tied to
-          any one book. The targets below come from your Upper/Lower program specifically — a Full Body or PPL routine
-          trains each muscle at a different frequency, so "High" there means "more than your Upper/Lower baseline", not
-          an absolute ceiling.
-        </span>
-      </div>
-      {missingCount > 0 && (
-        <span style={{ font: "400 12.5px/1.4 'Inter', sans-serif", color: 'var(--accent)' }}>
-          ⚠ {missingCount} muscle group{missingCount === 1 ? ' is' : 's are'} not trained anywhere in this routine.
-        </span>
-      )}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: '1.3fr 0.8fr 0.8fr 1.2fr 0.9fr',
-          gap: 8,
-          font: "500 10.5px/1 'Inter', sans-serif",
-          color: 'var(--text-dim)',
-          textTransform: 'uppercase',
-          letterSpacing: '.04em',
-          paddingBottom: 8,
-          borderBottom: '1px solid var(--border)',
-        }}
-      >
-        <span>Muscle</span>
-        <span>Frequency</span>
-        <span>Weekly sets</span>
-        <span>Your target</span>
-        <span>Status</span>
-      </div>
-      {rows.map((r) => (
-        <div
-          key={r.muscle}
-          onClick={() => onSelectMuscle(selectedMuscle === r.muscle ? null : r.muscle)}
-          title="Click to highlight this muscle's exercises below"
-          style={{
-            display: 'grid',
-            gridTemplateColumns: '1.3fr 0.8fr 0.8fr 1.2fr 0.9fr',
-            gap: 8,
-            alignItems: 'center',
-            padding: '4px 6px',
-            marginInline: -6,
-            borderRadius: 6,
-            cursor: 'pointer',
-            background: selectedMuscle === r.muscle ? 'var(--hover-bg)' : 'transparent',
-          }}
-        >
-          <span style={{ font: "400 13px/1 'Inter', sans-serif", color: 'var(--text-body)' }}>{r.muscle.replace('_', ' ')}</span>
-          <span style={{ font: "400 13px/1 'Inter', sans-serif", color: 'var(--text-body)' }}>{r.frequency}x</span>
-          <span style={{ font: "400 13px/1 'Inter', sans-serif", color: 'var(--text-body)' }}>{r.weeklySets}</span>
-          <span style={{ font: "400 12px/1 'Inter', sans-serif", color: 'var(--text-dim)' }}>
-            {r.target != null ? `${r.target}${r.isFloor ? '+' : ''}` : '—'}
-          </span>
-          <span
-            title={explainStatus(r)}
-            style={{
-              font: "600 11px/1 'Inter Tight', sans-serif",
-              color: STATUS_COLOR[r.status],
-              textTransform: 'uppercase',
-              textDecoration: 'underline dotted',
-              textUnderlineOffset: 3,
-              cursor: 'help',
-            }}
-          >
-            {STATUS_LABEL[r.status]}
-          </span>
+    <section className="panel warnings">
+      <div className="section-heading"><div><h2>Avisos · {warnings.length}</h2><p className="helper-text">Se recalculan cada vez que mueves un día o cambias un ejercicio.</p></div></div>
+      {kinds.map(kind => (
+        <div key={kind} className="warning-group">
+          <span className={`warning-kind k-${kind}`}>{KIND_LABEL[kind]}</span>
+          <ul>{warnings.filter(w => w.kind === kind).map(w => (
+            <li key={w.key}><button className="warning-item" onClick={() => onFocus(w)}><strong>{w.title}</strong><span>{w.detail}</span></button></li>
+          ))}</ul>
         </div>
       ))}
-    </div>
-  );
-}
-
-function NewWorkoutDayCard({ onAdd }: { onAdd: (name: string) => void }) {
-  const [dayTypeKey, setDayTypeKey] = useState(DAY_TYPES[0].key);
-  const [customName, setCustomName] = useState('');
-  const dayType = DAY_TYPES.find((d) => d.key === dayTypeKey)!;
-  const isCustom = dayType.key === 'custom';
-  const name = isCustom ? customName : dayType.label;
-
-  const rows = dayType.muscles
-    .map((m) => ({ muscle: m, target: targetFor(m) }))
-    .filter((r) => r.target != null);
-  const totalTarget = rows.reduce((sum, r) => sum + (r.target?.weeklySets ?? 0), 0);
-
-  return (
-    <div className="card" style={{ maxWidth: 640 }}>
-      <span className="label">New workout day</span>
-
-      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-        {DAY_TYPES.map((d) => (
-          <button
-            key={d.key}
-            onClick={() => setDayTypeKey(d.key)}
-            style={{
-              border: 'none',
-              background: dayTypeKey === d.key ? 'var(--accent)' : 'var(--hover-bg)',
-              color: dayTypeKey === d.key ? 'var(--accent-text)' : 'var(--nav-inactive)',
-              padding: '7px 14px',
-              borderRadius: 6,
-              font: "600 12px/1 'Inter Tight', sans-serif",
-            }}
-          >
-            {d.label}
-          </button>
-        ))}
-      </div>
-
-      {!isCustom && rows.length > 0 && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, padding: '10px 12px', background: 'var(--bg)', borderRadius: 8 }}>
-          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
-            <span style={{ font: "600 12px/1.2 'Inter Tight', sans-serif", color: 'var(--text-strong)' }}>
-              {dayType.label} — muscles trained
-            </span>
-            <span style={{ font: "600 11px/1 'Inter Tight', sans-serif", color: 'var(--accent)' }}>
-              {Math.round(totalTarget * 10) / 10} sets/wk combined target
-            </span>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 4 }}>
-            {rows.map((r) => (
-              <span key={r.muscle} style={{ font: "400 11.5px/1.4 'Inter', sans-serif", color: 'var(--text-muted)' }}>
-                {r.muscle.replace('_', ' ')} · {r.target!.weeklySets}
-                {r.target!.isFloor ? '+' : ''}
-              </span>
-            ))}
-          </div>
-          <span className="muted-note">
-            These are your program's weekly-set targets for each muscle — split across however many times a week you
-            actually run a {dayType.label.toLowerCase()} day.
-          </span>
-        </div>
-      )}
-
-      <div style={{ display: 'flex', gap: 10 }}>
-        {isCustom && (
-          <input
-            type="text"
-            placeholder="e.g. Arms Focus"
-            value={customName}
-            onChange={(e) => setCustomName(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && name.trim() && onAdd(name.trim())}
-            style={{ flex: 1 }}
-          />
-        )}
-        <button className="btn-primary" onClick={() => onAdd(name.trim())} disabled={!name.trim()} style={{ marginLeft: isCustom ? 0 : 'auto' }}>
-          Add {!isCustom && dayType.label}
-        </button>
-      </div>
-    </div>
+    </section>
   );
 }
 
 export default function RoutineDetail() {
-  const { t } = useLanguage();
   const { id } = useParams();
-  const { data: routines, loading, reload } = useApi(() => api.get<Routine[]>('/api/routines'));
+  const { data: routines, loading, reload, setData } = useApi(() => api.get<Routine[]>('/api/routines'));
   const { data: allExercises } = useApi(() => api.get<Exercise[]>('/api/exercises'));
-  const [priorities, setPriorities] = useState<PriorityMap>({});
   const [editingName, setEditingName] = useState(false);
   const [nameDraft, setNameDraft] = useState('');
   const [highlightMuscle, setHighlightMuscle] = useState<string | null>(null);
+  const [adding, setAdding] = useState(false);
+  const [error, setError] = useState('');
 
-  useEffect(() => {
-    setPriorities(loadPriorities());
-  }, []);
-
-  const routine = routines?.find((r) => r.id === Number(id));
-
-  function handleSetPriority(muscle: string, rank: 1 | 2 | 3) {
-    const next = { ...priorities, [muscle]: rank };
-    setPriorities(next);
-    savePriorities(next);
-  }
-
-  function handleClearPriority(muscle: string) {
-    const next = { ...priorities };
-    delete next[muscle];
-    setPriorities(next);
-    savePriorities(next);
-  }
+  const routine = routines?.find(r => r.id === Number(id));
 
   async function addWorkout(name: string) {
     if (!routine || !name.trim()) return;
-    await api.post(`/api/routines/${routine.id}/workouts`, {
-      name: name.trim(),
-      day_index: routine.workouts.length,
-      exercises: [],
-    });
+    await api.post(`/api/routines/${routine.id}/workouts`, { name: name.trim(), day_index: routine.workouts.length, exercises: [] });
+    setAdding(false);
     reload();
+  }
+
+  async function assign(workoutId: number, weekday: number | null) {
+    if (!routine) return;
+    setError('');
+    // Optimistic: move the card now, roll back if the server refuses.
+    const previous = routines;
+    setData(rs => rs && rs.map(r => r.id !== routine.id ? r : { ...r, workouts: r.workouts.map(w => w.id === workoutId ? { ...w, weekday } : w) }));
+    try {
+      const updated = await api.put<Routine>(`/api/routines/${routine.id}/schedule`, { assignments: [{ workout_id: workoutId, weekday }] });
+      setData(rs => rs && rs.map(r => r.id === updated.id ? updated : r));
+    } catch (err) {
+      setData(previous);
+      setError(err instanceof Error ? err.message : 'No se pudo mover el día.');
+    }
   }
 
   async function renameRoutine() {
-    if (!routine || !nameDraft.trim() || nameDraft.trim() === routine.name) {
-      setEditingName(false);
-      return;
-    }
-    await api.put(`/api/routines/${routine.id}`, { name: nameDraft.trim() });
     setEditingName(false);
+    if (!routine || !nameDraft.trim() || nameDraft.trim() === routine.name) return;
+    await api.put(`/api/routines/${routine.id}`, { name: nameDraft.trim() });
     reload();
   }
 
-  if (loading) return <span className="spinner-text">Loading…</span>;
-  if (!routine) return <span className="error-text">Routine not found.</span>;
+  function focus(w: PlanWarning) {
+    if (w.muscle) setHighlightMuscle(w.muscle);
+    const target = w.workoutId ? document.getElementById(`day-${w.workoutId}`) : w.muscle ? document.querySelector('.ex-row.highlighted') : null;
+    setTimeout(() => (target || (w.muscle ? document.querySelector('.ex-row.highlighted') : null))?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 50);
+  }
 
-  const muscles = [...new Set(routine.workouts.flatMap((w) => w.exercises.map((e) => e.muscle)))].sort();
-  const upperMuscles = muscles.filter((m) => UPPER_MUSCLES.includes(m));
-  const lowerMuscles = muscles.filter((m) => LOWER_MUSCLES.includes(m));
-  const allMuscles = [...new Set((allExercises || []).map((e) => e.muscle))];
-  const volumeRows = computeMuscleVolumeRows(routine, allMuscles);
-  const volumeByMuscle = new Map(volumeRows.map((r) => [r.muscle, r]));
+  if (loading && !routines) return <span className="muted-note">Cargando…</span>;
+  if (!routine) return <span className="error-text">No se encontró el programa.</span>;
 
-  return (
-    <>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-        <Link to="/app/routines" style={{ fontSize: 12, color: 'var(--text-dim)' }}>
-          ← {t('pages.routines')}
-        </Link>
-        {editingName ? (
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            <input
-              type="text"
-              value={nameDraft}
-              autoFocus
-              onChange={(e) => setNameDraft(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && renameRoutine()}
-              style={{ font: "500 22px/1.2 'Inter Tight', sans-serif", maxWidth: 360 }}
-            />
-            <button className="btn-primary" onClick={renameRoutine}>
-              Save
-            </button>
-            <button className="btn-ghost" onClick={() => setEditingName(false)}>
-              Cancel
-            </button>
-          </div>
-        ) : (
-          <h1
-            className="page-title"
-            onClick={() => {
-              setNameDraft(routine.name);
-              setEditingName(true);
-            }}
-            title="Click to rename"
-            style={{ cursor: 'text' }}
-          >
-            {routine.name} <span style={{ font: "400 13px/1 'Inter', sans-serif", color: 'var(--text-dim)' }}>✎</span>
-          </h1>
-        )}
+  const allMuscles = [...new Set((allExercises || []).map(e => e.muscle))];
+  const analysis = analysePlan(routine, allMuscles);
+  const volumeByMuscle = new Map(analysis.rows.map(r => [r.muscle, r]));
+  const items: BoardItem[] = routine.workouts.map(w => ({
+    id: w.id,
+    day: w.weekday,
+    label: w.name,
+    content: <><strong>{w.name}</strong><span>{plural(w.exercises.length, "ejercicio", "ejercicios")} · {plural(w.exercises.reduce((n, e) => n + (e.target_sets || 0), 0), "serie", "series")}</span></>,
+  }));
+  const ordered = [...routine.workouts].sort((a, b) => (a.weekday ?? 9) - (b.weekday ?? 9) || (a.day_index ?? 0) - (b.day_index ?? 0));
+
+  return <>
+    <div className="page-heading">
+      <div>
+        <Link to="/app/routines" className="back-link">← Entrenamientos</Link>
+        {editingName
+          ? <input className="title-input" value={nameDraft} autoFocus onChange={e => setNameDraft(e.target.value)} onKeyDown={e => e.key === 'Enter' && renameRoutine()} onBlur={renameRoutine} aria-label="Nombre del programa" />
+          : <h1><button className="title-button" onClick={() => { setNameDraft(routine.name); setEditingName(true); }} title="Renombrar">{routine.name}</button></h1>}
+        {!routine.is_active && <p className="helper-text">Este programa no está activo: su semana no aparece en Mi resumen.</p>}
       </div>
+    </div>
 
-      <VolumeFrequencyCard rows={volumeRows} selectedMuscle={highlightMuscle} onSelectMuscle={setHighlightMuscle} />
+    <section className="panel">
+      <div className="section-heading">
+        <div><h2>Semana fija</h2><p className="helper-text">Arrastra cada día a su día de la semana. Para mover un entreno solo una semana, hazlo desde Mi resumen.</p></div>
+        <button className="btn-primary" onClick={() => setAdding(v => !v)} aria-expanded={adding}>{adding ? 'Cerrar' : '+ Agregar día'}</button>
+      </div>
+      {adding && <NewDayForm onAdd={addWorkout} onCancel={() => setAdding(false)} />}
+      <WeekBoard items={items} trayLabel="Sin día" onMove={assign} />
+      {error && <p className="error-text" role="alert">{error}</p>}
+    </section>
 
-      <MusclePriorityCard
-        upperMuscles={upperMuscles}
-        lowerMuscles={lowerMuscles}
-        priorities={priorities}
-        onSet={handleSetPriority}
-        onClear={handleClearPriority}
-      />
+    <Warnings warnings={analysis.warnings} onFocus={focus} />
+    <MuscleSummary rows={analysis.rows} selected={highlightMuscle} onSelect={setHighlightMuscle} />
 
-      {routine.workouts.map((w) => (
-        <WorkoutCard
-          key={w.id}
-          workout={w}
-          priorities={priorities}
-          volumeByMuscle={volumeByMuscle}
-          highlightMuscle={highlightMuscle}
-          onChanged={reload}
-          onDeleted={reload}
-        />
-      ))}
-
-      <NewWorkoutDayCard onAdd={addWorkout} />
-    </>
-  );
+    {ordered.map(w => (
+      <WorkoutCard key={w.id} workout={w} exercisesLibrary={allExercises || []} volumeByMuscle={volumeByMuscle} highlightMuscle={highlightMuscle} onChanged={reload} onDeleted={reload} />
+    ))}
+  </>;
 }

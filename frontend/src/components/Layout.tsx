@@ -4,9 +4,8 @@ import { useTheme } from '../theme/ThemeContext';
 
 const navigation = [
   ['/app', 'Mi resumen', 'overview'],
-  ['/app/daily-log', 'Bitácora diaria', 'table'],
+  ['/app/checkin', 'Check-in diario', 'table'],
   ['/app/routines', 'Entrenamientos', 'training'],
-  ['/app/preparation', 'Preparación', 'target'],
   ['/app/history', 'Historial', 'history'],
 ] as const;
 
@@ -30,18 +29,15 @@ export default function Layout() {
     <div className="app-shell">
       <aside className="sidebar">
         <Link className="brand" to="/app"><span className="brand-symbol"><Icon name="sun" /></span><span>cool for<br /><strong>the summer</strong></span></Link>
-        <p className="sidebar-caption">Tu constancia, en perspectiva.</p>
         <nav aria-label="Navegación principal">{navigation.map(([to, label, icon]) => <NavLink end={to === '/app'} key={to} to={to} className={({ isActive }) => `nav-item ${isActive ? 'selected' : ''}`}><Icon name={icon} /><span>{label}</span></NavLink>)}</nav>
         <div className="sidebar-bottom">
           <NavLink to="/app/exercises" className="nav-item"><Icon name="training" />Biblioteca de ejercicios</NavLink>
           <NavLink to="/app/settings" className="nav-item"><Icon name="settings" />Preferencias</NavLink>
-          <div className="personal-label"><span className="status-dot" /> Espacio personal · Natural</div>
         </div>
       </aside>
       <div className="workspace">
-        <header className="workspace-header"><span>Un día a la vez.</span><div><button className="quiet-button" onClick={() => setMode(mode === 'dark' ? 'light' : 'dark')} aria-label="Cambiar entre tema claro y oscuro"><Icon name="sun" /></button>{!personalMode && <button className="quiet-button" onClick={logout}>Salir</button>}<Link className="user-avatar" to="/app/settings" aria-label="Abrir mi espacio y preferencias">Yo</Link></div></header>
+        <header className="workspace-header"><span /><div><button className="quiet-button" onClick={() => setMode(mode === 'dark' ? 'light' : 'dark')} aria-label="Cambiar entre tema claro y oscuro"><Icon name="sun" /></button>{!personalMode && <button className="quiet-button" onClick={logout}>Salir</button>}<Link className="user-avatar" to="/app/settings" aria-label="Abrir mi espacio y preferencias">Yo</Link></div></header>
         <main className="workspace-main"><Outlet /></main>
-        <footer className="workspace-footer">Cool for the Summer <span>Hecho para el trabajo de cada día.</span></footer>
       </div>
     </div>
   );

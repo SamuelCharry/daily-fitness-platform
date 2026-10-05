@@ -10,6 +10,8 @@ class User(Base):
     id = Column(Integer, primary_key=True)
     email = Column(String, unique=True, nullable=False, index=True)
     password_hash = Column(String, nullable=False)
+    # SHA-256 of the phone-sync key. Only the hash is stored; the key is shown once.
+    sync_token_hash = Column(String)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     profile = relationship("UserProfile", back_populates="user", uselist=False)
@@ -95,6 +97,7 @@ class Workout(Base):
     routine_id = Column(Integer, ForeignKey("routines.id"), nullable=False)
     name = Column(String, nullable=False)
     day_index = Column(Integer)  # order within the routine's week
+    weekday = Column(Integer)  # 0 = Monday ... 6 = Sunday; None = not on the weekly plan
 
     routine = relationship("Routine", back_populates="workouts")
     exercises = relationship(
@@ -115,6 +118,9 @@ class WorkoutExercise(Base):
     rir_target = Column(Integer)
     rest_seconds = Column(Integer)
     comments = Column(String)
+    # A removed or swapped-out slot that already has logged sets is retired rather
+    # than deleted, so SetLog history keeps pointing at a real exercise.
+    retired = Column(Boolean, default=False)
 
     workout = relationship("Workout", back_populates="exercises")
     exercise = relationship("Exercise")
@@ -126,6 +132,7 @@ class WorkoutSession(Base):
     id = Column(Integer, primary_key=True)
     workout_id = Column(Integer, ForeignKey("workouts.id"), nullable=False)
     date = Column(Date, nullable=False)
+    started_at = Column(DateTime(timezone=True))  # None on sessions created before it existed
     finished_at = Column(DateTime(timezone=True))
 
     workout = relationship("Workout")
@@ -170,3 +177,15 @@ class BodyStat(Base):
     notes = Column(String)
 
     user = relationship("User", back_populates="body_stats")
+
+
+class ScheduleMove(Base):
+    """A one-week exception to the weekly plan: this workout happens on `date`
+    instead of its usual weekday, only for the week starting `week_start` (Monday)."""
+    __tablename__ = "schedule_moves"
+    __table_args__ = (UniqueConstraint("user_id", "workout_id", "week_start", name="uq_schedule_move"),)
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    workout_id = Column(Integer, ForeignKey("workouts.id"), nullable=False)
+    week_start = Column(Date, nullable=False)
+    date = Column(Date, nullable=False)

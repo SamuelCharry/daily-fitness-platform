@@ -1,14 +1,17 @@
 # Cool for the Summer
 
-Bitácora personal para entrenamientos, peso y preparación de culturismo natural. Interfaz en español, rojo ladrillo sobre blanco cálido, tablas editables y sesiones pensadas para usar desde el gimnasio. React / FastAPI / SQLite, una sola aplicación para publicar y una sola cuenta.
+Bitácora personal para entrenamientos, peso y preparación de culturismo natural. Interfaz en español, grafito sobre blanco y sesiones pensadas para usar desde el gimnasio. React / FastAPI / SQLite, una sola aplicación para publicar y una sola cuenta.
 
 ## Qué funciona
 
-- Resumen con último peso, promedio móvil de 7 días, comparación semanal y sesiones completadas.
-- Bitácora por fecha: peso, energía, macros, pasos, sueño, cardio, medidas y notas. Guardado por fila o de todas las filas modificadas, validación y CSV.
-- Rutinas propias y plantillas. Sesiones con kg, repeticiones, RIR, valores de la sesión anterior, edición de series y descanso con reloj real.
-- Retomar una sesión pendiente del mismo día sin crear otra al recargar.
-- Preparación: fase, fecha objetivo, peso objetivo, energía/proteína objetivo, frecuencia y notas. Datos guardados en el servidor.
+- Mi resumen: check-in diario (peso, cintura, cuello, sueño, pasos, calorías, proteína y dieta sí/no), que se guarda campo por campo para poder registrar en distintos momentos del día, con atajos a hoy/ayer. Al lado, check-in semanal frente a la semana anterior.
+- Indicadores: peso promedio de 7 días y ritmo semanal, % de grasa aproximado (método Navy), FFMI normalizado, distancia a la meta y días sin registrar.
+- Gráficas de peso, cintura, sueño, pasos, calorías y proteína, y un heatmap de constancia (registro, dieta, pasos o sueño).
+- Entrenamientos: semana fija con días que se arrastran, avisos de agenda, recuperación, redundancia, volumen y frecuencia, y cambio de ejercicio por uno equivalente (mismo músculo, acción articular y plano) sin perder el historial de series.
+- Esta semana (en Mi resumen): mueve un entreno a otro día solo esa semana; marca hechos, pendientes y perdidos.
+- Sesiones con kg, repeticiones, RIR, valores de la sesión anterior y descanso con reloj real. Objetivos y datos personales en Preferencias.
+- Sincronización con iPhone: un Atajo de iOS envía pasos y sueño de Salud a `POST /api/sync/health` con una clave propia (Preferencias → Sincronizar con iPhone). Solo funciona con la app publicada; el iPhone no llega a 127.0.0.1.
+- Sesiones con contador de tiempo total y de descanso entre series (vibra al cumplir el descanso).
 - Sin registro público. Modo local sin login; servidor con correo y contraseña, sesión recordada durante 7 días.
 
 Referencia de experiencia: [MacroFactor Workouts](https://macrofactor.com/workouts/). Esta versión no replica su algoritmo de progresión, sus programas comerciales ni todas sus funciones avanzadas.

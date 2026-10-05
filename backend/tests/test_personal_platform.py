@@ -91,6 +91,59 @@ class PersistenceAndAccessTests(unittest.TestCase):
         last = self.client.get(f"/api/sessions/last-sets/{workout['id']}", headers=self.headers).json()
         self.assertEqual(last[str(log['workout_exercise_id'])][0]['weight'], 52.5)
 
+    def test_swap_keeps_targets_and_history(self):
+        exercises = self.client.get('/api/exercises', headers=self.headers).json()
+        rows = [e for e in exercises if e['joint_action'] == 'Horizontal Pull' and e['muscle'] == 'upper_back']
+        old, new = rows[0], rows[1]
+        routine = self.client.post('/api/routines', headers=self.headers, json={'name': 'Swap routine'}).json()
+        workout = self.client.post(f"/api/routines/{routine['id']}/workouts", headers=self.headers, json={'name': 'Pull', 'exercises': [{'exercise_id': old['id'], 'target_sets': 4, 'rep_range_min': 6, 'rep_range_max': 10}]}).json()
+        slot = workout['exercises'][0]['id']
+        session = self.client.post('/api/sessions', headers=self.headers, json={'workout_id': workout['id']}).json()
+        self.client.post(f"/api/sessions/{session['id']}/sets", headers=self.headers, json={'workout_exercise_id': slot, 'set_number': 1, 'weight': 60, 'reps': 8})
+        swapped = self.client.post(f'/api/workout-exercises/{slot}/swap', headers=self.headers, json={'exercise_id': new['id']}).json()
+        self.assertEqual([e['exercise_id'] for e in swapped['exercises']], [new['id']])
+        self.assertEqual((swapped['exercises'][0]['target_sets'], swapped['exercises'][0]['rep_range_max']), (4, 10))
+        self.assertEqual(swapped['history_exercises'], [{'id': slot, 'exercise_id': old['id'], 'name': old['name']}])
+        # Removing a slot with history retires it; re-adding the exercise revives the same slot.
+        payload = lambda ids: {'name': 'Pull', 'exercises': [{'exercise_id': i} for i in ids]}
+        revived = self.client.put(f"/api/workouts/{workout['id']}", headers=self.headers, json=payload([new['id'], old['id']])).json()
+        self.assertIn(slot, [e['id'] for e in revived['exercises']])
+        self.assertEqual(self.client.post(f"/api/workout-exercises/{next(e['id'] for e in revived['exercises'] if e['exercise_id'] == new['id'])}/swap", headers=self.headers, json={'exercise_id': old['id']}).status_code, 409)
+
+    def test_weekly_schedule_and_one_week_moves(self):
+        routine = self.client.post('/api/routines', headers=self.headers, json={'name': 'Plan'}).json()
+        self.client.patch(f"/api/routines/{routine['id']}/activate", headers=self.headers)
+        push = self.client.post(f"/api/routines/{routine['id']}/workouts", headers=self.headers, json={'name': 'Push'}).json()
+        pull = self.client.post(f"/api/routines/{routine['id']}/workouts", headers=self.headers, json={'name': 'Pull'}).json()
+        scheduled = self.client.put(f"/api/routines/{routine['id']}/schedule", headers=self.headers, json={'assignments': [{'workout_id': push['id'], 'weekday': 0}]}).json()
+        self.assertEqual({w['name']: w['weekday'] for w in scheduled['workouts']}, {'Push': 0, 'Pull': None})
+        self.assertEqual(self.client.put(f"/api/routines/{routine['id']}/schedule", headers=self.headers, json={'assignments': [{'workout_id': push['id'], 'weekday': 7}]}).status_code, 422)
+        week = self.client.get('/api/schedule/week?start=2026-10-07', headers=self.headers).json()
+        self.assertEqual(week['week_start'], '2026-10-05')
+        self.assertEqual([(i['name'], i['date']) for i in week['items']], [('Push', '2026-10-05')])
+        self.assertEqual([u['name'] for u in week['unscheduled']], ['Pull'])
+        moved = self.client.put('/api/schedule/move', headers=self.headers, json={'workout_id': push['id'], 'week_start': '2026-10-05', 'date': '2026-10-06'}).json()
+        self.assertEqual((moved['items'][0]['date'], moved['items'][0]['moved']), ('2026-10-06', True))
+        # The move is for that week only.
+        self.assertEqual(self.client.get('/api/schedule/week?start=2026-10-12', headers=self.headers).json()['items'][0]['date'], '2026-10-12')
+        self.assertEqual(self.client.put('/api/schedule/move', headers=self.headers, json={'workout_id': push['id'], 'week_start': '2026-10-05', 'date': '2026-10-13'}).status_code, 400)
+        reset = self.client.put('/api/schedule/move', headers=self.headers, json={'workout_id': push['id'], 'week_start': '2026-10-05', 'date': None}).json()
+        self.assertFalse(reset['items'][0]['moved'])
+
+    def test_phone_sync_key(self):
+        url = '/api/sync/health'
+        self.assertEqual(self.client.post(url, json={'steps': 100}).status_code, 401)
+        key = self.client.post('/api/sync/token', headers=self.headers).json()['token']
+        sync = {'X-Sync-Key': key}
+        saved = self.client.post(url, headers=sync, json={'date': 'ayer', 'steps': '8.432', 'sleep_hours': '7,5'}).json()
+        self.assertEqual(saved['saved'], {'steps': 8432, 'sleep_minutes': 450})
+        self.assertEqual(self.client.post(url, headers=sync, json={}).status_code, 422)
+        self.assertEqual(self.client.post(url, headers=sync, json={'date': '2001-01-01', 'steps': 1}).status_code, 422)
+        # The key can't be used as a normal session, and a new key replaces the old one.
+        self.assertEqual(self.client.get('/api/body-stats', headers={'Authorization': f'Bearer {key}'}).status_code, 401)
+        self.client.post('/api/sync/token', headers=self.headers)
+        self.assertEqual(self.client.post(url, headers=sync, json={'steps': 1}).status_code, 401)
+
     def test_other_account_cannot_read_owner_records(self):
         with SessionLocal() as db:
             user = User(email='isolated@example.com', password_hash=hash_password('test-only-password-123'))
@@ -101,8 +154,8 @@ class PersistenceAndAccessTests(unittest.TestCase):
         self.assertEqual(self.client.get('/api/routines', headers=headers).json(), [])
 
     def test_spa_deep_links_and_api_404(self):
-        self.assertEqual(self.client.get('/app/daily-log').status_code, 200)
-        self.assertIn('Cool for the Summer', self.client.get('/app/preparation').text)
+        self.assertEqual(self.client.get('/app/routines').status_code, 200)
+        self.assertIn('Cool for the Summer', self.client.get('/app/settings').text)
         self.assertEqual(self.client.get('/api/not-a-route').status_code, 404)
 
 if __name__ == '__main__': unittest.main()

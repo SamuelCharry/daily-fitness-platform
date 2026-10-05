@@ -129,7 +129,28 @@ export interface Workout {
   id: number;
   name: string;
   day_index: number | null;
+  weekday: number | null; // 0 = lunes ... 6 = domingo
   exercises: WorkoutExerciseEntry[];
+  history_exercises?: { id: number; exercise_id: number; name: string }[];
+}
+
+export interface WeekPlanItem {
+  workout_id: number;
+  name: string;
+  exercise_count: number;
+  usual_date: string | null;
+  date: string;
+  moved: boolean;
+  done: boolean;
+  done_date: string | null;
+  in_progress: boolean;
+}
+
+export interface WeekPlan {
+  week_start: string;
+  routine: { id: number; name: string } | null;
+  items: WeekPlanItem[];
+  unscheduled: { workout_id: number; name: string; exercise_count: number }[];
 }
 
 export interface Routine {
@@ -153,6 +174,7 @@ export interface WorkoutSession {
   workout_id: number;
   workout_name: string;
   date: string;
+  started_at: string | null;
   finished_at: string | null;
   sets: SetLog[];
 }

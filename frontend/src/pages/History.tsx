@@ -7,7 +7,7 @@ import { displayDate, downloadCSV } from '../utils/journal';
 export default function History() {
   const { data, error, loading, reload } = useApi(async () => ({ sessions: await api.get<WorkoutSession[]>('/api/sessions?days=36500'), routines: await api.get<Routine[]>('/api/routines') }));
   const [selected, setSelected] = useState<number | null>(null);
-  const lookup = new Map(data?.routines.flatMap(r => r.workouts.flatMap(w => w.exercises.map(e => [e.id, e] as const))) || []);
+  const lookup = new Map(data?.routines.flatMap(r => r.workouts.flatMap(w => [...w.exercises, ...(w.history_exercises || [])].map(e => [e.id, e] as const))) || []);
   function exportCSV() {
     downloadCSV('cool-for-the-summer-entrenamientos.csv', [['Fecha', 'Sesión', 'Estado', 'Ejercicio', 'Serie', 'kg', 'Reps', 'RIR'], ...(data?.sessions || []).flatMap(s => s.sets.map(set => [s.date, s.workout_name, s.finished_at ? 'Finalizada' : 'Pendiente', lookup.get(set.workout_exercise_id)?.name || set.workout_exercise_id, set.set_number, set.weight, set.reps, set.rir]))]);
   }

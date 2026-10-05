@@ -7,11 +7,35 @@ import type { LastSet, LastSetsByExercise, Routine, SetLog, WorkoutExerciseEntry
 type Draft = { weight: string; reps: string; rir: string };
 function fromSet(set?: LastSet): Draft { return { weight: String(set?.weight ?? ''), reps: String(set?.reps ?? ''), rir: String(set?.rir ?? '') }; }
 
-function RestTimer({ deadline, onDone }: { deadline: number; onDone: () => void }) {
+// SQLite drops the timezone, so a bare "2026-10-04T18:30:00" from the API is UTC.
+function parseServerTime(value: string | null): number | null {
+  if (!value) return null;
+  return Date.parse(/[zZ]|[+-]\d\d:?\d\d$/.test(value) ? value : `${value}Z`);
+}
+
+function clock(ms: number): string {
+  const total = Math.max(0, Math.floor(ms / 1000));
+  const h = Math.floor(total / 3600), m = Math.floor((total % 3600) / 60), sec = total % 60;
+  return `${h ? `${h}:${String(m).padStart(2, '0')}` : m}:${String(sec).padStart(2, '0')}`;
+}
+
+// Two clocks: time since the session started, and rest since the last saved set,
+// counting up so you also see when you rested longer than planned. Both are
+// timestamps (not counters), so they survive reloads and a locked phone.
+function SessionClock({ startedAt, rest, onClearRest }: { startedAt: number; rest: { since: number; target: number | null } | null; onClearRest: () => void }) {
   const [now, setNow] = useState(() => Date.now());
-  useEffect(() => { const timer = setInterval(() => setNow(Date.now()), 250); return () => clearInterval(timer); }, []);
-  const left = Math.max(0, Math.ceil((deadline - now) / 1000));
-  return <div className="rest-bar" role="status"><span>{left ? 'Descanso' : 'Descanso completado'}</span><strong>{Math.floor(left / 60)}:{String(left % 60).padStart(2, '0')}</strong><button onClick={onDone}>{left ? 'Saltar descanso' : 'Continuar'}</button></div>;
+  useEffect(() => { const timer = setInterval(() => setNow(Date.now()), 500); return () => clearInterval(timer); }, []);
+  const resting = rest ? now - rest.since : null;
+  const done = rest?.target != null && resting != null && resting >= rest.target * 1000;
+  useEffect(() => { if (done) navigator.vibrate?.([200, 100, 200]); }, [done]);
+  return <div className="session-clock" role="timer" aria-live="off">
+    <div><span>Entrenando</span><strong>{clock(now - startedAt)}</strong></div>
+    <div className={`rest${done ? ' done' : ''}`}>
+      <span>{rest ? (done ? 'Descanso cumplido' : 'Descanso') : 'Descanso'}{rest?.target ? ` · objetivo ${clock(rest.target * 1000)}` : ''}</span>
+      <strong>{resting != null ? clock(resting) : '—'}</strong>
+    </div>
+    {rest && <button onClick={onClearRest}>{done ? 'Listo' : 'Ocultar'}</button>}
+  </div>;
 }
 function ExerciseTable({ exercise, sets, last, busy, onSave, storageKey }: { exercise: WorkoutExerciseEntry; sets: SetLog[]; last: LastSet[]; busy: boolean; storageKey: string; onSave: (n: number, draft: Draft) => Promise<boolean> }) {
   const [drafts, setDrafts] = useState<Record<number, Draft>>(() => {
@@ -47,8 +71,18 @@ export default function Session() {
   const [index, setIndex] = useState(0);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
-  const [deadline, setDeadline] = useState<number | null>(null);
+  const [rest, setRest] = useState<{ since: number; target: number | null } | null>(null);
+  const [openedAt] = useState(() => Date.now());
   useEffect(() => { if (data) setSession(data.session); }, [data]);
+  const restKey = session ? `cfts-rest-${session.id}` : null;
+  useEffect(() => {
+    if (!restKey) return;
+    try { const saved = localStorage.getItem(restKey); if (saved) setRest(JSON.parse(saved)); } catch { /* ignore */ }
+  }, [restKey]);
+  function startRest(value: { since: number; target: number | null } | null) {
+    setRest(value);
+    try { if (restKey) { if (value) localStorage.setItem(restKey, JSON.stringify(value)); else localStorage.removeItem(restKey); } } catch { /* ignore */ }
+  }
   const workout = data?.workout;
   async function log(exercise: WorkoutExerciseEntry, n: number, draft: Draft) {
     if (!session || busy) return false;
@@ -58,7 +92,7 @@ export default function Session() {
     try {
       const updated = await api.post<WorkoutSession>(`/api/sessions/${session.id}/sets`, { workout_exercise_id: exercise.id, set_number: n, weight, reps, rir });
       setSession(updated);
-      if (exercise.rest_seconds) setDeadline(Date.now() + exercise.rest_seconds * 1000);
+      startRest({ since: Date.now(), target: exercise.rest_seconds });
       return true;
     } catch (err) { setMessage(err instanceof Error ? err.message : 'No se pudo guardar. Intenta de nuevo.'); return false; }
     finally { setBusy(false); }
@@ -69,7 +103,7 @@ export default function Session() {
     const planned = workout?.exercises.reduce((sum, e) => sum + (e.target_sets || 1), 0) || 0;
     if (session.sets.length < planned && !window.confirm('Quedan series del plan sin registrar. ¿Finalizar con las series guardadas?')) return;
     setBusy(true);
-    try { await api.post(`/api/sessions/${session.id}/finish`); navigate('/app/history', { replace: true }); }
+    try { await api.post(`/api/sessions/${session.id}/finish`); startRest(null); navigate('/app/history', { replace: true }); }
     catch (err) { setMessage(err instanceof Error ? err.message : 'No se pudo finalizar. Intenta de nuevo.'); }
     finally { setBusy(false); }
   }
@@ -80,8 +114,8 @@ export default function Session() {
   return <>
     <div className="session-top"><Link to="/app">Volver al resumen</Link><span>{session.sets.length} series guardadas</span></div>
     <div className="page-heading"><div><h1>{session.workout_name}</h1><p>{workout.exercises.length} ejercicios · Tus series se guardan al confirmarlas.</p></div><button className="btn-primary" disabled={busy} onClick={finish}>{busy ? 'Guardando…' : 'Finalizar'}</button></div>
+    <SessionClock startedAt={parseServerTime(session.started_at) ?? openedAt} rest={rest} onClearRest={() => startRest(null)} />
     <nav className="exercise-tabs" aria-label="Ejercicios de la sesión">{workout.exercises.map((e, i) => <button key={e.id} aria-pressed={index === i} className={index === i ? 'active' : ''} onClick={() => setIndex(i)}><span>{i + 1}</span>{e.name}</button>)}</nav>
-    {deadline && <RestTimer key={deadline} deadline={deadline} onDone={() => setDeadline(null)} />}
     {message && <div className="error-banner" role="alert">{message}</div>}
     {exercise ? <ExerciseTable key={exercise.id} storageKey={`cfts-session-${session.id}-${exercise.id}`} exercise={exercise} sets={session.sets.filter(s => s.workout_exercise_id === exercise.id)} last={data?.last[exercise.id] || []} busy={busy} onSave={(n, draft) => log(exercise, n, draft)} /> : <p>Este día no tiene ejercicios. <Link to="/app/routines">Añadir ejercicios a la rutina</Link></p>}
     <div className="session-navigation"><button className="btn-ghost" disabled={index === 0} onClick={() => setIndex(index - 1)}>Anterior</button><span>{exercise ? index + 1 : 0} / {workout.exercises.length} ejercicios</span><button className="btn-ghost" disabled={index >= workout.exercises.length - 1} onClick={() => setIndex(index + 1)}>Siguiente ejercicio</button></div>

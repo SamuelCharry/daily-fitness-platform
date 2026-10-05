@@ -45,6 +45,7 @@ def _serialize_session(session: WorkoutSession):
         "workout_id": session.workout_id,
         "workout_name": session.workout.name,
         "date": session.date,
+        "started_at": session.started_at,
         "finished_at": session.finished_at,
         "sets": [
             {
@@ -130,8 +131,12 @@ def start_session(
             WorkoutSession.finished_at.is_(None),
         ).order_by(WorkoutSession.id.desc()).first()
         if existing:
+            if existing.started_at is None:
+                existing.started_at = datetime.now(timezone.utc)
+                db.commit()
+                db.refresh(existing)
             return _serialize_session(existing)
-        session = WorkoutSession(workout_id=workout.id, date=local_today())
+        session = WorkoutSession(workout_id=workout.id, date=local_today(), started_at=datetime.now(timezone.utc))
         db.add(session)
         db.commit()
         db.refresh(session)

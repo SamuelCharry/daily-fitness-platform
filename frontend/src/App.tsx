@@ -9,13 +9,12 @@ import Dashboard from './pages/Dashboard';
 import Routines from './pages/Routines';
 import RoutineDetail from './pages/RoutineDetail';
 import Exercises from './pages/Exercises';
-import DailyLog from './pages/DailyLog';
 import Session from './pages/Session';
 import Glossary from './pages/Glossary';
 import History from './pages/History';
 import ExerciseProgress from './pages/ExerciseProgress';
 import Settings from './pages/Settings';
-import Preparation from './pages/Preparation';
+import Checkin from './pages/Checkin';
 
 function RequireAuth({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth();
@@ -77,11 +76,12 @@ export default function App() {
                 <Route path="/app/routines/:id" element={<RoutineDetail />} />
                 <Route path="/app/exercises" element={<Exercises />} />
                 <Route path="/app/exercises/:id/progress" element={<ExerciseProgress />} />
-                <Route path="/app/daily-log" element={<DailyLog />} />
+                <Route path="/app/checkin" element={<Checkin />} />
+                <Route path="/app/daily-log" element={<Navigate to="/app/checkin" replace />} />
                 <Route path="/app/glossary" element={<Glossary />} />
                 <Route path="/app/history" element={<History />} />
                 <Route path="/app/settings" element={<Settings />} />
-                <Route path="/app/preparation" element={<Preparation />} />
+                <Route path="/app/preparation" element={<Navigate to="/app/settings" replace />} />
               </Route>
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>

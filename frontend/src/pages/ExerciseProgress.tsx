@@ -31,7 +31,7 @@ export default function ExerciseProgress() {
   const workoutExerciseIds = new Set<number>();
   routines?.forEach((r) =>
     r.workouts.forEach((w) =>
-      w.exercises.forEach((e) => {
+      [...w.exercises, ...(w.history_exercises || [])].forEach((e) => {
         if (e.exercise_id === exerciseId) workoutExerciseIds.add(e.id);
       }),
     ),
