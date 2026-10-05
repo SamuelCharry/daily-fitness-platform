@@ -15,6 +15,7 @@ import History from './pages/History';
 import ExerciseProgress from './pages/ExerciseProgress';
 import Settings from './pages/Settings';
 import Checkin from './pages/Checkin';
+import Notes from './pages/Notes';
 
 function RequireAuth({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth();
@@ -38,6 +39,8 @@ export default function App() {
           <AuthProvider>
             <Routes>
               <Route path="/" element={<Navigate to="/app" replace />} />
+              <Route path="/notes" element={<Notes />} />
+              <Route path="/notes/:slug" element={<Notes />} />
               <Route
                 path="/glossary"
                 element={
@@ -76,6 +79,8 @@ export default function App() {
                 }
               >
                 <Route path="/app" element={<Dashboard />} />
+                <Route path="/app/notes" element={<Notes embedded />} />
+                <Route path="/app/notes/:slug" element={<Notes embedded />} />
                 <Route path="/app/routines" element={<Routines />} />
                 <Route path="/app/routines/:id" element={<RoutineDetail />} />
                 <Route path="/app/exercises" element={<Exercises />} />

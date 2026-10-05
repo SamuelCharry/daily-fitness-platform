@@ -13,6 +13,9 @@ Bitácora personal para entrenamientos, peso y preparación de culturismo natura
 - Sincronización con iPhone: un Atajo de iOS envía pasos y sueño de Salud a `POST /api/sync/health` con una clave propia (Preferencias → Sincronizar con iPhone). Solo funciona con la app publicada; el iPhone no llega a 127.0.0.1.
 - Sesiones con contador de tiempo total y de descanso entre series (vibra al cumplir el descanso).
 - Registro y login con correo y contraseña; datos separados por cuenta y sesión recordada durante 7 días. Modo local personal sin login para el propietario.
+- Mis notas: biblioteca pública en `/notes`, gratis y sin login, con buscador, filtros, lecturas breves y referencias. También aparece dentro de la plataforma en `/app/notes`. Las 12 notas iniciales son resúmenes editoriales de los manuales de TNF proporcionados, con contexto de ACSM/NIDDK; los PDFs originales y las anotaciones privadas no se publican.
+
+Para ampliar o corregir la colección pública, editar `frontend/src/content/notes.ts` y volver a desplegar. Cada nota necesita un slug único y referencias; cambiar el slug cambia su enlace público. Este contenido se comparte con todos: no añadir registros personales ni credenciales. La bitácora de cada cuenta sigue siendo privada.
 
 Referencia de experiencia: [MacroFactor Workouts](https://macrofactor.com/workouts/). Esta versión no replica su algoritmo de progresión, sus programas comerciales ni todas sus funciones avanzadas.
 

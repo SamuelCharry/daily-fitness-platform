@@ -90,6 +90,7 @@ p { line-height: 1.65; }
 .workspace { min-width: 0; }
 .workspace-header { height: 70px; padding: 0 40px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); color: var(--text-muted); font-size: 12px; }
 .workspace-header > div { display: flex; align-items: center; gap: 12px; }
+.notes-header-link { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; font-weight: 600; color: var(--text-strong); }
 .user-avatar { width: 31px; height: 31px; border-radius: 50%; background: var(--hover-bg); display: grid; place-items: center; font-size: 11px; color: var(--text); }
 .workspace-main { max-width: 1400px; padding: 38px 40px 28px; margin: auto; display: flex; flex-direction: column; gap: 26px; }
 .workspace-footer { max-width: 1400px; margin: auto; padding: 14px 40px 24px; display: flex; justify-content: space-between; font-size: 10px; color: var(--text-muted); }
@@ -185,7 +186,8 @@ table { border-collapse: collapse; font-variant-numeric: tabular-nums; text-alig
 .error-text { color: var(--danger); font-size: 13px; }
 .muted-note, .spinner-text { font-size: 12px; line-height: 1.6; color: var(--text-muted); }
 .session-page { max-width: 900px; margin: auto; padding: 32px 24px; display: flex; flex-direction: column; gap: 24px; }
-.login-page { min-height: 100vh; display: grid; place-items: center; padding: 24px; }
+.login-page { position: relative; min-height: 100vh; display: grid; place-items: center; padding: 88px 24px 24px; }
+.login-notes-link { position: absolute; top: 20px; right: 24px; display: inline-flex; align-items: center; gap: 8px; min-height: 44px; }
 .login-form { max-width: 410px; width: 100%; display: flex; flex-direction: column; gap: 22px; }
 .login-form .brand { padding: 0; margin-bottom: 22px; }
 .login-form h1 { margin-bottom: 0; }
@@ -518,6 +520,70 @@ table { border-collapse: collapse; font-variant-numeric: tabular-nums; text-alig
 @media(max-width: 760px) { .session-clock strong { font-size: 22px; } .session-clock > div { padding: 10px 12px; } }
 
 .sync-fields { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
+
+/* Public reading library, shared with the signed-in notes section. */
+.notes-public { min-height: 100vh; }
+.notes-public-header { max-width: 1152px; margin: 0 auto; padding: 30px 28px; display: flex; align-items: center; justify-content: space-between; gap: 20px; border-bottom: 1px solid var(--border); }
+.notes-public .notes-page { max-width: 1152px; margin: 0 auto; padding: 52px 28px 64px; }
+.notes-page { min-width: 0; }
+.notes-intro { max-width: 740px; }
+.notes-eyebrow { font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--text-muted); }
+.notes-intro h1 { margin: 14px 0 12px; font: 700 clamp(36px, 5vw, 60px)/1.04 'Inter Tight', sans-serif; letter-spacing: -.035em; }
+.notes-intro > p { font-size: 20px; line-height: 1.5; color: var(--text-body); margin: 0; }
+.notes-intro .notes-description { font-size: 14px; line-height: 1.8; max-width: 640px; margin-top: 14px; color: var(--text-muted); }
+.notes-tools { margin: 32px 0 18px; display: flex; align-items: end; flex-wrap: wrap; gap: 20px; }
+.notes-tools .field { flex: 1 1 320px; max-width: 440px; }
+.notes-tools input { width: 100%; min-height: 44px; }
+.notes-filters { display: flex; gap: 7px; flex-wrap: wrap; }
+.notes-filters button { border: 1px solid var(--border2); background: var(--bg-alt); color: var(--text-body); border-radius: 6px; padding: 10px 14px; font-size: 13px; min-height: 44px; }
+.notes-filters button.selected { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+.notes-count { color: var(--text-muted); font-size: 12px; margin: 0 0 16px; }
+.notes-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.note-preview { position: relative; border: 1px solid var(--border); background: var(--bg-alt); border-radius: 10px; padding: 22px; display: flex; flex-direction: column; min-height: 220px; transition: border-color .15s ease; }
+.note-preview:hover, .note-preview:focus-within { border-color: var(--border2); }
+.note-meta { display: flex; justify-content: space-between; gap: 12px; color: var(--text-muted); font-size: 11px; line-height: 1.5; }
+.note-meta > :first-child { font-weight: 600; }
+.note-preview h2 { font: 600 21px/1.2 'Inter Tight', sans-serif; letter-spacing: -.015em; margin: 18px 0 10px; }
+.note-preview h2 a { color: var(--text-strong); }
+.note-preview h2 a::after { content: ''; position: absolute; inset: 0; }
+.note-preview p { font-size: 13px; line-height: 1.75; color: var(--text-muted); margin: 0 0 20px; }
+.note-read { margin-top: auto; color: var(--text-body); font-size: 12px; font-weight: 600; }
+.notes-library-footer { border-top: 1px solid var(--border); margin-top: 36px; padding-top: 24px; max-width: 760px; }
+.notes-library-footer h2 { font-size: 16px; margin: 0 0 10px; }
+.notes-library-footer p { font-size: 12px; line-height: 1.8; color: var(--text-muted); }
+.notes-empty { padding: 36px 0; }
+.notes-empty p { color: var(--text-muted); }
+.note-reader { max-width: 720px; margin: 0 auto; }
+.note-back { display: inline-block; font-size: 13px; margin-bottom: 28px; text-decoration: underline; }
+.note-reader h1 { margin: 16px 0; font: 700 clamp(32px, 5vw, 48px)/1.08 'Inter Tight', sans-serif; letter-spacing: -.03em; overflow-wrap: break-word; }
+.note-reader .note-lead { color: var(--text-muted); font-size: 18px; line-height: 1.65; }
+.note-takeaway { border-left: 3px solid var(--accent); background: var(--accent-soft); padding: 18px 22px; margin: 28px 0 32px; }
+.note-takeaway > span { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; font-weight: 600; }
+.note-takeaway > p { margin: 8px 0 0; line-height: 1.65; color: var(--text-strong); }
+.note-reader > section { margin: 28px 0; }
+.note-reader h2 { font: 600 22px/1.3 'Inter Tight', sans-serif; margin: 0 0 12px; }
+.note-reader > section p { font-size: 16px; line-height: 1.9; color: var(--text-body); margin: 0; }
+.note-sources { padding-top: 28px; border-top: 1px solid var(--border); margin-top: 36px; }
+.note-sources ul { padding-left: 18px; font-size: 13px; line-height: 1.75; }
+.note-sources li { margin: 10px 0; }
+.note-sources li span { display: block; color: var(--text-muted); font-size: 12px; }
+.note-sources a { text-decoration: underline; }
+.note-sources > p { font-size: 12px; line-height: 1.8; color: var(--text-muted); }
+.note-related { margin-top: 24px; padding-top: 24px; border-top: 1px solid var(--border); }
+.note-related > a { display: flex; justify-content: space-between; gap: 16px; border-bottom: 1px solid var(--border); padding: 15px 0; font-size: 14px; }
+@media(max-width: 1050px) { .notes-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media(max-width: 640px) {
+  .notes-public-header { padding: 20px; gap: 12px; }
+  .notes-public-header .btn-ghost { font-size: 11px; padding: 10px; }
+  .notes-public .notes-page { padding: 32px 20px 44px; }
+  .notes-grid { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+  .notes-tools { margin-top: 24px; gap: 14px; }
+  .notes-tools .field { flex-basis: 100%; max-width: none; }
+  .notes-filters button { padding: 10px 11px; font-size: 12px; }
+  .note-preview { min-height: 190px; padding: 20px; }
+  .note-reader .note-lead { font-size: 16px; }
+  .note-reader > section p { font-size: 15px; }
+}
 .sync-fields > div { display: grid; grid-template-columns: 170px minmax(0, 1fr) auto; gap: 12px; align-items: center; font-size: 12px; color: var(--text-muted); }
 .sync-fields code, .sync-steps code { font: 12px ui-monospace, 'Cascadia Code', monospace; background: var(--bg-raised); color: var(--text-strong); padding: 6px 8px; border-radius: 6px; overflow-wrap: anywhere; }
 .sync-steps code { padding: 1px 5px; }

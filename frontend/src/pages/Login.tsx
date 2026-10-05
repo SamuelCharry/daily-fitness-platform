@@ -23,7 +23,7 @@ export default function Login({ createAccount = false }: { createAccount?: boole
     catch (err) { setError(err instanceof ApiError ? (err.status === 422 ? 'Revisa el correo y usa una contraseña de 12 a 72 caracteres (máximo 72 bytes).' : err.message) : 'No se pudo conectar. Intenta de nuevo.'); }
     finally { setBusy(false); }
   }
-  return <main className="login-page"><form className="login-form" onSubmit={submit}>
+  return <main className="login-page"><Link className="login-notes-link btn-ghost" to="/notes"><Icon name="book" /><span>Notas</span></Link><form className="login-form" onSubmit={submit}>
     <div className="brand"><span className="brand-symbol"><Icon name="sun" /></span><span>cool for<br /><strong>the summer</strong></span></div>
     <h1>{createAccount ? 'Crea tu cuenta.' : 'Tu espacio. Tu progreso.'}</h1>
     <p>{createAccount ? 'Tu propio espacio para entrenar, registrar y seguir tu progreso. Tus registros son privados.' : 'Entra a tu bitácora personal. Recordaremos tu sesión en este dispositivo durante siete días.'}</p>
@@ -38,5 +38,6 @@ export default function Login({ createAccount = false }: { createAccount?: boole
     <button className="btn-primary" disabled={busy || (createAccount && !registrationEnabled)}>{busy ? (createAccount ? 'Creando…' : 'Entrando…') : (createAccount ? 'Crear mi cuenta' : 'Entrar a mi bitácora')}</button>
     {createAccount ? <p>¿Ya tienes cuenta? <Link to="/login">Inicia sesión</Link></p> : registrationEnabled && <p>¿Primera vez? <Link to="/register">Crear una cuenta</Link></p>}
     <p className="helper-text">Una plataforma personal para entrenar, registrar y seguir adelante.</p>
+    <Link to="/notes">Leer las notas gratis →</Link>
   </form></main>;
 }

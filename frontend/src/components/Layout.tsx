@@ -7,6 +7,7 @@ const navigation = [
   ['/app/checkin', 'Check-in diario', 'table'],
   ['/app/routines', 'Entrenamientos', 'training'],
   ['/app/history', 'Historial', 'history'],
+  ['/app/notes', 'Mis notas', 'book'],
 ] as const;
 
 export function Icon({ name }: { name: string }) {
@@ -16,6 +17,7 @@ export function Icon({ name }: { name: string }) {
     training: 'M7 5v14 M3 8v8 M17 5v14 M21 8v8 M7 12h10',
     target: 'M12 3a9 9 0 1 0 9 9 M12 7a5 5 0 1 0 5 5 M12 12l8-8 M16 4h4v4',
     history: 'M3 11a9 9 0 1 1 2 7 M3 4v7h7 M12 7v5l3 2',
+    book: 'M12 5v16 M3 3h5a4 4 0 0 1 4 2 4 4 0 0 1 4-2h5v16h-5a4 4 0 0 0-4 2 4 4 0 0 0-4-2H3z',
     settings: 'M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8 M12 2v3 M12 19v3 M2 12h3 M19 12h3 M5 5l2 2 M17 17l2 2 M5 19l2-2 M17 7l2-2',
     sun: 'M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8 M12 2v2 M12 20v2 M2 12h2 M20 12h2 M5 5l1.5 1.5 M17.5 17.5L19 19 M5 19l1.5-1.5 M17.5 6.5L19 5',
   };
@@ -36,7 +38,7 @@ export default function Layout() {
         </div>
       </aside>
       <div className="workspace">
-        <header className="workspace-header"><span /><div><button className="quiet-button" onClick={() => setMode(mode === 'dark' ? 'light' : 'dark')} aria-label="Cambiar entre tema claro y oscuro"><Icon name="sun" /></button>{!personalMode && <button className="quiet-button" onClick={logout}>Salir</button>}<Link className="user-avatar" to="/app/settings" aria-label="Abrir mi espacio y preferencias">Yo</Link></div></header>
+        <header className="workspace-header"><Link className="notes-header-link" to="/app/notes"><Icon name="book" /><span>Mis notas</span></Link><div><button className="quiet-button" onClick={() => setMode(mode === 'dark' ? 'light' : 'dark')} aria-label="Cambiar entre tema claro y oscuro"><Icon name="sun" /></button>{!personalMode && <button className="quiet-button" onClick={logout}>Salir</button>}<Link className="user-avatar" to="/app/settings" aria-label="Abrir mi espacio y preferencias">Yo</Link></div></header>
         <main className="workspace-main"><Outlet /></main>
       </div>
     </div>
