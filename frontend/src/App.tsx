@@ -32,7 +32,7 @@ function RedirectIfAuthed({ children }: { children: ReactNode }) {
 
 export default function App() {
   return (
-    <BrowserRouter basename="/daily-fitness-platform">
+    <BrowserRouter basename={import.meta.env.BASE_URL}>
       <ThemeProvider>
         <LanguageProvider>
           <AuthProvider>

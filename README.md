@@ -34,6 +34,10 @@ Para desarrollo: levantar la API con el script y `npm run dev --prefix frontend`
 
 ## Publicar por poco dinero
 
+### Ruta de publicación
+
+En un dominio propio (como `negative-rir.dvergaram.dev`), compilar con la base predeterminada `/`. El router toma `import.meta.env.BASE_URL` de Vite: no debe fijarse `/daily-fitness-platform` en `App.tsx`, porque en la raíz del dominio dejaría la página vacía. Para publicar bajo una subcarpeta, usar `npm run build --prefix frontend -- --base=/daily-fitness-platform/`; los recursos y el router usarán esa misma ruta. El servidor debe entregar el HTML de la aplicación en las rutas de navegación, incluidas `/login` y `/app`.
+
 Recomendación inicial: **Railway Hobby**, mínimo US$5/mes con US$5 de consumo incluido; puede aumentar con el uso. Una sola aplicación y un volumen para SQLite evitan pagar dos servicios y una base aparte. Configuración revisada el 4 de octubre de 2026. [Precio oficial](https://railway.com/pricing).
 
 1. Crear un servicio desde este repositorio (raíz). Railway detecta `Dockerfile`; `railway.toml` configura el healthcheck.
