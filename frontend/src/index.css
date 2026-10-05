@@ -1,5 +1,5 @@
 :root, :root[data-theme='light'] {
-  color-scheme: light;
+  color-scheme: light; --brand-ink: #000000;
   --bg: #f4f5f6; --bg-alt: #ffffff; --bg-raised: #eceef0;
   --border: #e1e4e8; --border2: #c8cdd3; --input-bg: #ffffff;
   --text: #1f2328; --text-strong: #101316; --text-body: #3a4047;
@@ -14,7 +14,7 @@
   --danger-soft: #fbeceb; --warning-soft: #eceef0; --success-soft: #e8f3ec;
 }
 :root[data-theme='dark'] {
-  color-scheme: dark;
+  color-scheme: dark; --brand-ink: #ffffff;
   --bg: #121416; --bg-alt: #1a1d20; --bg-raised: #23272b;
   --border: #2d3237; --border2: #454c53; --input-bg: #15181b;
   --text: #e6e8eb; --text-strong: #ffffff; --text-body: #cdd2d7;
@@ -30,7 +30,7 @@
 }
 @media(prefers-color-scheme: dark) {
   :root:not([data-theme]) {
-    color-scheme: dark;
+    color-scheme: dark; --brand-ink: #ffffff;
     --bg: #121416; --bg-alt: #1a1d20; --bg-raised: #23272b;
   --border: #2d3237; --border2: #454c53; --input-bg: #15181b;
   --text: #e6e8eb; --text-strong: #ffffff; --text-body: #cdd2d7;
@@ -297,7 +297,7 @@ table { border-collapse: collapse; font-variant-numeric: tabular-nums; text-alig
 @media(max-width:760px) { .program-days { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 
 /* ---- Graphite redesign: shared bits ---- */
-.brand-symbol { color: var(--text-strong); }
+.brand-symbol { color: var(--brand-ink); }
 .sidebar { background: var(--metal-soft); }
 .workspace-header { height: 56px; }
 .link-button { background: none; border: 0; padding: 0; color: var(--text-strong); font-size: inherit; text-decoration: underline; text-underline-offset: 3px; }
