@@ -8,7 +8,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from .database import Base, engine, run_migrations
-from .routers import auth, body_stats, dashboard, exercises, profile, routines, sessions, sync
+from .routers import auth, body_stats, dashboard, exercises, profile, routines, sessions, sync, tuning, templates
 from .auth import OWNER_EMAIL, PERSONAL_MODE, hash_password
 from .database import SessionLocal
 from .models import User
@@ -56,6 +56,8 @@ app.include_router(sessions.router)
 app.include_router(body_stats.router)
 app.include_router(dashboard.router)
 app.include_router(sync.router)
+app.include_router(tuning.router)
+app.include_router(templates.router)
 
 # The production image serves both the SPA and API from the same origin.
 static_dir = Path(os.getenv("STATIC_DIR", "/app/static"))

@@ -1,8 +1,4 @@
-// Default routine templates, ranked by per-muscle training frequency — the
-// variable the Glossary's "Frequency" and "Volume" entries treat as the main
-// lever, and the same reasoning behind computeMuscleVolumeRows' min/max bands.
-// Full Body trains everything most often, so it's the default recommendation;
-// straight-through PPL trains each muscle least often, so it ranks last.
+// Starting templates. Actual frequency and time depend on the selected exercises and calendar.
 
 export type SessionLength = 45 | 60 | 90;
 
@@ -18,7 +14,7 @@ export interface RoutineTemplate {
   label: string;
   daysPerWeek: number;
   frequencyPerMuscle: number;
-  rank: number; // 1 = recommended first
+  rank: number; // Display order among generic templates
   rationale: string;
   days: TemplateDay[];
 }
@@ -39,7 +35,7 @@ export const ROUTINE_TEMPLATES: RoutineTemplate[] = [
     frequencyPerMuscle: 3,
     rank: 1,
     rationale:
-      'Every session trains everything, landing each muscle around 3x/week — the highest frequency of the three. Current evidence favors higher frequency for the same weekly volume, which is why this is the recommended default if 3 sessions/week works for your schedule.',
+      'Tres sesiones de cuerpo completo. Revisa los ejercicios y usa Ajuste fino para adaptar las series al tiempo que tienes.',
     days: [
       { name: 'Full Body 1', muscles: ALL_MUSCLES },
       { name: 'Full Body 2', muscles: ALL_MUSCLES },
@@ -53,7 +49,7 @@ export const ROUTINE_TEMPLATES: RoutineTemplate[] = [
     frequencyPerMuscle: 2,
     rank: 2,
     rationale:
-      'Two upper + two lower sessions land each muscle at 2x/week — the frequency most current research treats as a sweet spot — while giving more room per session for isolation work than Full Body does.',
+      'Dos días de tren superior y dos de tren inferior. La frecuencia final depende de los músculos que incluyas y de tu calendario.',
     days: [
       { name: 'Upper 1', muscles: UPPER_MUSCLES },
       { name: 'Lower 1', muscles: LOWER_MUSCLES },
@@ -65,10 +61,10 @@ export const ROUTINE_TEMPLATES: RoutineTemplate[] = [
     key: 'ppl',
     label: 'Push / Pull / Legs',
     daysPerWeek: 3,
-    frequencyPerMuscle: 1.5,
+    frequencyPerMuscle: 1,
     rank: 3,
     rationale:
-      "Push, Pull, and Legs each get trained once before the cycle repeats, so most muscles land around 1–1.5x/week by the time rest days are accounted for — the lowest frequency of the three. It packs in the most volume and exercise variety per muscle in a single sitting, but needs more training days than Full Body or Upper/Lower to reach the same frequency.",
+      "Un día de empuje, otro de tirón y otro de piernas por semana. Puedes duplicar días y volver a ajustar las series según la nueva frecuencia.",
     days: [
       { name: 'Push', muscles: PUSH_MUSCLES },
       { name: 'Pull', muscles: PULL_MUSCLES },

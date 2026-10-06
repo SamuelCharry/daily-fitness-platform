@@ -4,7 +4,7 @@
 import type { Routine, Workout, WorkoutExerciseEntry } from '../types';
 import { volumeRowsFor, volumeMuscle, volumeMuscleName, type MuscleVolumeRow } from './volumeGuideline';
 import { baselineLabel } from '../data/muscleVolumeTargets';
-import { jointActionName, muscleName, planeName, WEEKDAYS } from '../data/labels';
+import { muscleName, WEEKDAYS } from '../data/labels';
 
 export type WarningKind = 'volumen' | 'frecuencia' | 'recuperacion' | 'redundancia' | 'agenda';
 
@@ -36,11 +36,11 @@ export interface RedundantPair {
   plane: string | null;
 }
 
-// Exercises in the same day that hit the same muscle through the same joint action.
+// Metadata cannot establish stimulus equivalence. Flag only the exact same exercise twice.
 export function redundantPairs(exercises: WorkoutExerciseEntry[]): Map<number, RedundantPair> {
   const found = new Map<number, RedundantPair>();
   exercises.forEach((a, i) => exercises.forEach((b, j) => {
-    if (i !== j && !found.has(a.exercise_id) && a.muscle === b.muscle && a.joint_action && a.joint_action === b.joint_action) {
+    if (i !== j && !found.has(a.exercise_id) && a.exercise_id === b.exercise_id) {
       found.set(a.exercise_id, { other: b.name, muscle: a.muscle, jointAction: a.joint_action, plane: a.plane });
     }
   }));
@@ -123,8 +123,7 @@ export function analysePlan(routine: Routine, allMuscles: string[]): PlanAnalysi
       const group = `${pair.muscle}-${pair.jointAction}`;
       if (seen.has(group)) continue;
       seen.add(group);
-      const names = w.exercises.filter(e => e.muscle === pair.muscle && e.joint_action === pair.jointAction).map(e => e.name);
-      warnings.push({ key: `red-${w.id}-${group}`, kind: 'redundancia', workoutId: w.id, muscle: pair.muscle, title: `${w.name}: ${names.join(' y ')} hacen lo mismo`, detail: `Ambos trabajan ${muscleName(pair.muscle).toLowerCase()} con ${jointActionName(pair.jointAction)} (plano ${planeName(pair.plane)}). Compiten por la misma recuperación sin añadir un estímulo nuevo: cambia uno por otro movimiento o junta sus series en uno.` });
+      warnings.push({ key: `red-${w.id}-${group}`, kind: 'redundancia', workoutId: w.id, muscle: pair.muscle, title: `${w.name}: ejercicio repetido · ${pair.other}`, detail: 'El mismo ejercicio aparece más de una vez. Revisa si era intencional. Compartir músculo o acción no convierte ejercicios distintos en redundantes.' });
     }
   }
 

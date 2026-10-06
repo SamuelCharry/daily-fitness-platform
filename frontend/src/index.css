@@ -591,3 +591,26 @@ table { border-collapse: collapse; font-variant-numeric: tabular-nums; text-alig
 .sync-steps summary { cursor: pointer; font-weight: 600; color: var(--text-strong); }
 .sync-steps ol { padding-left: 20px; line-height: 1.7; color: var(--text-body); }
 @media(max-width: 760px) { .sync-fields > div { grid-template-columns: minmax(0, 1fr); } }
+/* Routine adjustment keeps controls and the before/apply decision together. */
+.routine-edit-fields, .tuning-controls { border: 0; padding: 0; margin: 0; min-width: 0; }
+.routine-edit-fields { display: grid; gap: 24px; }
+.fine-tuning { display: grid; gap: 20px; min-width: 0; }
+.tuning-preview { min-width: 0; }
+#routine-review { display: grid; gap: 24px; min-width: 0; scroll-margin-top: 80px; }
+.performed-label { display: block; max-width: 140px; font-size: 11px; font-weight: 400; line-height: 1.4; }
+.tuning-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 18px; }
+.tuning-grid label { display: grid; gap: 8px; }
+.tuning-grid input, .tuning-grid select { width: 100%; min-width: 0; padding: 12px; border: 1px solid var(--border); border-radius: 8px; color: var(--text); background: var(--bg-raised); font: inherit; }
+.tuning-muscles { display: flex; flex-wrap: wrap; gap: 12px 24px; }
+.tuning-muscles label { display: flex; align-items: center; gap: 8px; }
+.tuning-muscles input { width: 18px; height: 18px; accent-color: var(--accent); }
+.fine-tuning details { color: var(--text-muted); line-height: 1.65; }
+.fine-tuning summary { cursor: pointer; color: var(--text); }
+.fine-tuning > .btn-primary { justify-self: start; }
+.tuning-day { border-top: 1px solid var(--border); padding: 20px 0; min-width: 0; }
+.tuning-table-wrap { overflow-x: auto; }
+.tuning-day table { width: 100%; border-collapse: collapse; text-align: left; }
+.tuning-day th, .tuning-day td { padding: 12px 8px; border-bottom: 1px solid var(--border); }
+.tuning-spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid var(--border); border-top-color: var(--text); border-radius: 50%; animation: tuning-spin .8s linear infinite; vertical-align: middle; margin-right: 8px; }
+@keyframes tuning-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .tuning-spinner { animation: none; } }

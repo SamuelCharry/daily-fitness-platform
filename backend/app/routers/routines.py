@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from ..auth import get_current_user, get_db
-from ..models import Exercise, Routine, ScheduleMove, SetLog, User, Workout, WorkoutExercise, WorkoutSession
+from ..models import Exercise, Routine, RoutineTuning, ScheduleMove, SetLog, User, Workout, WorkoutExercise, WorkoutSession
 
 router = APIRouter(prefix="/api", tags=["routines"])
 
@@ -66,7 +66,7 @@ def _serialize_workout(workout: Workout):
         # Retired slots only exist so history can still name the exercise behind old sets.
         "history_exercises": [
             {"id": we.id, "exercise_id": we.exercise.id, "name": we.exercise.name}
-            for we in workout.exercises
+            for we in sorted(workout.exercises, key=lambda e: (e.order_index or 0, e.id))
             if _is_retired(we)
         ],
         "exercises": [
@@ -86,7 +86,7 @@ def _serialize_workout(workout: Workout):
                 "joint_action": we.exercise.joint_action,
                 "plane": we.exercise.plane,
             }
-            for we in workout.exercises
+            for we in sorted(workout.exercises, key=lambda e: (e.order_index or 0, e.id))
             if not _is_retired(we)
         ],
     }
@@ -178,6 +178,7 @@ def delete_routine(
     routine = _get_owned_routine(routine_id, current_user, db)
     for workout in list(routine.workouts):
         _cascade_delete_workout(workout, db)
+    db.query(RoutineTuning).filter(RoutineTuning.routine_id == routine.id).delete()
     db.delete(routine)
     db.commit()
 

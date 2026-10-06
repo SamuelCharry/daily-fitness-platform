@@ -9,6 +9,8 @@ import { buildWorkoutsFromTemplate } from '../utils/templateBuilder';
 export default function TemplatePicker({ onCreated }: { onCreated: () => void }) {
   const navigate = useNavigate();
   const { data: exercises } = useApi(() => api.get<Exercise[]>('/api/exercises'));
+  const { data: creator } = useApi(() => api.get<{ name: string; days: string[]; label: string } | null>('/api/routine-templates/creator'));
+  const [error, setError] = useState('');
   const [minutes, setMinutes] = useState<SessionLength>(60);
   const [busyKey, setBusyKey] = useState<string | null>(null);
 
@@ -26,17 +28,26 @@ export default function TemplatePicker({ onCreated }: { onCreated: () => void })
       }
       onCreated();
       navigate(`/app/routines/${routine.id}`);
-    } finally {
+    } catch (e) { setError(e instanceof Error ? e.message : 'No se pudo crear la rutina.'); } finally {
       setBusyKey(null);
     }
+  }
+
+  async function useCreator() {
+    setBusyKey('creator'); setError('');
+    try {
+      const routine = await api.post<Routine>('/api/routine-templates/creator/copy');
+      onCreated(); navigate(`/app/routines/${routine.id}`);
+    } catch (e) { setError(e instanceof Error ? e.message : 'No se pudo copiar la plantilla.'); }
+    finally { setBusyKey(null); }
   }
 
   return (
     <div className="card">
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
-        <span className="label">Start from a template</span>
+        <span className="label">Empezar desde una plantilla</span>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ font: "400 11px/1 'Inter', sans-serif", color: 'var(--text-dim)' }}>Time per session</span>
+          <span style={{ font: "400 11px/1 'Inter', sans-serif", color: 'var(--text-dim)' }}>Tiempo orientativo</span>
           <div style={{ display: 'flex', gap: 4, background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8, padding: 3 }}>
             {SESSION_LENGTHS.map((m) => (
               <button
@@ -58,6 +69,8 @@ export default function TemplatePicker({ onCreated }: { onCreated: () => void })
         </div>
       </div>
 
+      {error && <p role="alert" className="error-text">{error}</p>}
+      {creator && <div className="tuning-day"><span className="label">★ {creator.label}</span><h3>{creator.name}</h3><p>{creator.days.join(' · ')}</p><p className="helper-text">Copia independiente de la rutina del creador, con sus ejercicios y series originales. Después puedes ajustarla a tu tiempo; el selector de duración no cambia esta plantilla.</p><button className="btn-primary" disabled={busyKey !== null} onClick={useCreator}>{busyKey === 'creator' ? 'Creando…' : 'Usar PPL × UL'}</button></div>}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 12 }}>
         {templates.map((tpl) => (
           <div
@@ -68,32 +81,32 @@ export default function TemplatePicker({ onCreated }: { onCreated: () => void })
               gap: 10,
               padding: '16px 18px',
               borderRadius: 10,
-              border: tpl.rank === 1 ? '1px solid var(--accent)' : '1px solid var(--border)',
+              border: !creator && tpl.rank === 1 ? '1px solid var(--accent)' : '1px solid var(--border)',
               background: 'var(--bg-raised)',
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <span style={{ font: "600 14.5px/1.2 'Inter Tight', sans-serif", color: 'var(--text-strong)' }}>{tpl.label}</span>
-              {tpl.rank === 1 && (
+              {!creator && tpl.rank === 1 && (
                 <span style={{ font: "700 9.5px/1 'Inter Tight', sans-serif", color: 'var(--accent)', letterSpacing: '.04em' }}>
-                  RECOMMENDED
+                  OPCIÓN DE 3 DÍAS
                 </span>
               )}
             </div>
             <span style={{ font: "400 11.5px/1 'Inter', sans-serif", color: 'var(--text-dim)' }}>
-              {tpl.daysPerWeek} days/week · ~{tpl.frequencyPerMuscle}x/week per muscle
+              {tpl.daysPerWeek} días/semana · ~{tpl.frequencyPerMuscle}x/semana por músculo
             </span>
             <p style={{ margin: 0, font: "400 12.5px/1.5 'Inter', sans-serif", color: 'var(--text-muted)' }}>{tpl.rationale}</p>
             <span style={{ font: "400 11px/1.4 'Inter', sans-serif", color: 'var(--text-dim)' }}>
               {tpl.days.map((d) => d.name).join(' · ')}
             </span>
             <button
-              className={tpl.rank === 1 ? 'btn-primary' : 'btn-ghost'}
+              className={!creator && tpl.rank === 1 ? 'btn-primary' : 'btn-ghost'}
               onClick={() => createFromTemplate(tpl.key)}
               disabled={busyKey !== null || !exercises}
               style={{ marginTop: 'auto' }}
             >
-              {busyKey === tpl.key ? 'Creating…' : `Use ${tpl.label}`}
+              {busyKey === tpl.key ? 'Creando…' : `Usar ${tpl.label}`}
             </button>
           </div>
         ))}

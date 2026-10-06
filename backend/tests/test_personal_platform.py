@@ -253,4 +253,114 @@ class PersistenceAndAccessTests(unittest.TestCase):
             app.dependency_overrides.pop(get_db, None)
             isolated_engine.dispose()
 
+    def test_tuning_atomic_undo_conflicts_and_isolation(self):
+        exercise = self.client.get('/api/exercises', headers=self.headers).json()[0]
+        r = self.client.post('/api/routines', headers=self.headers, json={'name':'Tuning test'}).json()
+        w = self.client.post(f"/api/routines/{r['id']}/workouts", headers=self.headers, json={'name':'Day','exercises':[{'exercise_id':exercise['id'],'target_sets':3,'rest_seconds':120,'comments':'keep','rir_target':2}]}).json()
+        def current():
+            return next(x for x in self.client.get('/api/routines',headers=self.headers).json() if x['id']==r['id'])
+        before=current()
+        url=f"/api/routines/{r['id']}/tuning"
+        change={'id':w['exercises'][0]['id'],'target_sets':6,'rest_seconds':180}
+        other=self.client.post('/api/auth/register',json={'email':'tuning-other@example.com','password':'test-other-password-123'}).json()
+        foreign={'Authorization':f"Bearer {other['access_token']}"}
+        self.assertEqual(self.client.post(url,headers=foreign,json={'expected':before,'changes':[change]}).status_code,404)
+        self.assertEqual(self.client.post(url,headers=self.headers,json={'expected':before,'changes':[change,{**change,'id':999999}]}).status_code,400)
+        self.assertEqual(current(),before)
+        applied=self.client.post(url,headers=self.headers,json={'expected':before,'changes':[change]})
+        self.assertEqual(applied.status_code,200,applied.text)
+        self.assertEqual(current()['workouts'][0]['exercises'][0]['target_sets'],6)
+        self.assertEqual(current()['workouts'][0]['exercises'][0]['comments'],'keep')
+        self.assertTrue(self.client.get(url,headers=self.headers).json()['can_undo'])
+        self.assertEqual(self.client.post(url,headers=self.headers,json={'expected':before,'changes':[change]}).status_code,409)
+        self.assertEqual(self.client.post(url+'/undo',headers=foreign).status_code,404)
+        self.assertEqual(self.client.post(url+'/undo',headers=self.headers).json(),before)
+        self.assertFalse(self.client.get(url,headers=self.headers).json()['can_undo'])
+        self.client.post(url,headers=self.headers,json={'expected':before,'changes':[change]})
+        self.client.put(f"/api/routines/{r['id']}",headers=self.headers,json={'name':'Edited afterwards'})
+        self.assertEqual(self.client.post(url+'/undo',headers=self.headers).status_code,409)
+        self.assertEqual(current()['name'],'Edited afterwards')
+
+    def test_creator_template_snapshot_and_independent_copy(self):
+        import hashlib
+        from app.creator_template import capture_creator_template, KEY
+        from app.models import PublishedRoutineTemplate, WorkoutExercise
+        r=self.client.post('/api/routines',headers=self.headers,json={'name':'PPLxUL'}).json()
+        ex=self.client.get('/api/exercises',headers=self.headers).json()[0]
+        w=self.client.post(f"/api/routines/{r['id']}/workouts",headers=self.headers,json={'name':'Push','exercises':[{'exercise_id':ex['id'],'target_sets':3,'rest_seconds':180,'comments':'PRIVATE NOTE'}]}).json()
+        with SessionLocal() as db:
+            capture_creator_template(db,hashlib.sha256(b'test@example.com').hexdigest());db.commit()
+            payload=db.get(PublishedRoutineTemplate,KEY).payload
+            self.assertNotIn('PRIVATE NOTE',payload); self.assertNotIn('test@example.com',payload)
+        info=self.client.get('/api/routine-templates/creator',headers=self.headers).json()
+        self.assertEqual(info['label'],'Favorita del creador')
+        copied=self.client.post('/api/routine-templates/creator/copy',headers=self.headers)
+        self.assertEqual(copied.status_code,200,copied.text)
+        clone=copied.json()
+        self.assertNotEqual(clone['id'],r['id'])
+        self.assertEqual(clone['workouts'][0]['exercises'][0]['target_sets'],3)
+        with SessionLocal() as db:
+            db.get(WorkoutExercise,w['exercises'][0]['id']).target_sets=9;db.commit()
+            capture_creator_template(db,hashlib.sha256(b'test@example.com').hexdigest());db.commit()
+            self.assertEqual(db.get(PublishedRoutineTemplate,KEY).payload,payload)
+        another=self.client.post('/api/routine-templates/creator/copy',headers=self.headers).json()
+        self.assertEqual(another['workouts'][0]['exercises'][0]['target_sets'],3)
+
+    def test_tuning_reorders_and_restores_exact_order(self):
+        pool=self.client.get('/api/exercises',headers=self.headers).json()[:3]
+        r=self.client.post('/api/routines',headers=self.headers,json={'name':'Order QA'}).json()
+        w=self.client.post(f"/api/routines/{r['id']}/workouts",headers=self.headers,json={'name':'Upper','exercises':[{'exercise_id':e['id'],'order_index':i,'target_sets':3,'rest_seconds':120} for i,e in enumerate(pool)]}).json()
+        before=next(x for x in self.client.get('/api/routines',headers=self.headers).json() if x['id']==r['id'])
+        ids=[e['id'] for e in w['exercises']]
+        body={'expected':before,'changes':[{'id':ids[0],'target_sets':4,'rest_seconds':180}],'orders':[{'workout_id':w['id'],'slot_ids':[ids[2],ids[0],ids[1]]}]}
+        url=f"/api/routines/{r['id']}/tuning"
+        invalid={**body,'orders':[{'workout_id':w['id'],'slot_ids':[ids[0],ids[0],ids[1]]}]}
+        self.assertEqual(self.client.post(url,headers=self.headers,json=invalid).status_code,400)
+        result=self.client.post(url,headers=self.headers,json=body)
+        self.assertEqual(result.status_code,200,result.text)
+        self.assertEqual([e['id'] for e in result.json()['workouts'][0]['exercises']],[ids[2],ids[0],ids[1]])
+        undone=self.client.post(url+'/undo',headers=self.headers)
+        self.assertEqual(undone.json(),before)
+
+    def test_session_substitution_preserves_sets_routine_and_ownership(self):
+        pool=self.client.get('/api/exercises',headers=self.headers).json()
+        original=next(e for e in pool if e['name']=='Incline Dumbbell Press')
+        alternative=next(e for e in pool if e['name']=='Incline Barbell Bench Press') if any(e['name']=='Incline Barbell Bench Press' for e in pool) else next(e for e in pool if e['muscle']==original['muscle'] and e['id']!=original['id'])
+        unrelated=next(e for e in pool if e['muscle']=='quads')
+        r=self.client.post('/api/routines',headers=self.headers,json={'name':'Session substitute QA'}).json()
+        w=self.client.post(f"/api/routines/{r['id']}/workouts",headers=self.headers,json={'name':'Push','exercises':[{'exercise_id':original['id'],'target_sets':3}]}).json()
+        slot=w['exercises'][0]['id']
+        session=self.client.post('/api/sessions',headers=self.headers,json={'workout_id':w['id']}).json()
+        url=f"/api/sessions/{session['id']}"
+        log={'workout_exercise_id':slot,'exercise_id':original['id'],'set_number':1,'weight':20,'reps':8}
+        self.client.post(url+'/sets',headers=self.headers,json=log)
+        swap={'workout_exercise_id':slot,'exercise_id':alternative['id'],'expected_exercise_id':original['id']}
+        alien=self.client.post('/api/auth/register',json={'email':'swap-session-other@example.com','password':'another-password-123'}).json()
+        self.assertEqual(self.client.post(url+'/substitute',headers={'Authorization':'Bearer '+alien['access_token']},json=swap).status_code,404)
+        self.assertEqual(self.client.post(url+'/substitute',headers=self.headers,json={**swap,'exercise_id':unrelated['id']}).status_code,400)
+        result=self.client.post(url+'/substitute',headers=self.headers,json=swap)
+        self.assertEqual(result.status_code,200,result.text)
+        self.assertEqual(result.json()['sets'][0]['exercise_id'],original['id'])
+        self.assertEqual(result.json()['substitutions'][str(slot)]['id'],alternative['id'])
+        self.assertEqual(self.client.post(url+'/sets',headers=self.headers,json={**log,'set_number':2}).status_code,409)
+        self.assertEqual(self.client.post(url+'/substitute',headers=self.headers,json=swap).status_code,409)
+        result=self.client.post(url+'/sets',headers=self.headers,json={**log,'exercise_id':alternative['id'],'set_number':2})
+        self.assertEqual(result.status_code,200,result.text)
+        self.assertEqual([e['exercise_id'] for e in result.json()['sets']],[original['id'],alternative['id']])
+        edited=self.client.post(url+'/sets',headers=self.headers,json={**log,'weight':22}).json()
+        self.assertEqual(edited['sets'][0]['exercise_id'],original['id'])
+        resumed=self.client.post('/api/sessions',headers=self.headers,json={'workout_id':w['id']}).json()
+        self.assertEqual(resumed['substitutions'][str(slot)]['id'],alternative['id'])
+        routine=next(x for x in self.client.get('/api/routines',headers=self.headers).json() if x['id']==r['id'])
+        self.assertEqual(routine['workouts'][0]['exercises'][0]['exercise_id'],original['id'])
+        restored=self.client.post(url+'/substitute',headers=self.headers,json={**swap,'exercise_id':original['id'],'expected_exercise_id':alternative['id']}).json()
+        self.assertEqual(restored['substitutions'],{})
+        self.assertEqual(restored['sets'][1]['exercise_id'],alternative['id'])
+        self.client.post(url+'/finish',headers=self.headers)
+        self.assertEqual(self.client.post(url+'/substitute',headers=self.headers,json=swap).status_code,409)
+        last=self.client.get(f"/api/sessions/last-sets/{w['id']}",headers=self.headers).json()
+        self.assertEqual([e['exercise_id'] for e in last[str(slot)]],[original['id'],alternative['id']])
+        new=self.client.post('/api/sessions',headers=self.headers,json={'workout_id':w['id']}).json()
+        self.assertNotEqual(new['id'],session['id']);self.assertEqual(new['substitutions'],{})
+
 if __name__ == '__main__': unittest.main()

@@ -117,6 +117,7 @@ export interface WorkoutExerciseEntry {
 }
 
 export interface LastSet {
+  exercise_id?: number;
   set_number: number;
   weight: number | null;
   reps: number | null;
@@ -161,6 +162,8 @@ export interface Routine {
 }
 
 export interface SetLog {
+  exercise_id?: number;
+  exercise_name?: string;
   id: number;
   workout_exercise_id: number;
   set_number: number;
@@ -170,6 +173,7 @@ export interface SetLog {
 }
 
 export interface WorkoutSession {
+  substitutions?: Record<number, Pick<Exercise, "id" | "name" | "equipment" | "muscle" | "joint_action" | "plane">>;
   id: number;
   workout_id: number;
   workout_name: string;

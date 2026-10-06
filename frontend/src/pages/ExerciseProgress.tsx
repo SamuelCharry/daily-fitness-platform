@@ -50,7 +50,7 @@ export default function ExerciseProgress() {
   const finished = (sessions || []).filter((s) => s.finished_at != null).sort((a, b) => a.date.localeCompare(b.date));
 
   for (const session of finished) {
-    const relevantSets = session.sets.filter((s) => workoutExerciseIds.has(s.workout_exercise_id));
+    const relevantSets = session.sets.filter((s) => s.exercise_id != null ? s.exercise_id === exerciseId : workoutExerciseIds.has(s.workout_exercise_id));
     if (relevantSets.length === 0) continue;
 
     let topWeight = 0;

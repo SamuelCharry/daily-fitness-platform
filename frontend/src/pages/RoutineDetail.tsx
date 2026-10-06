@@ -4,7 +4,9 @@ import { api } from '../api';
 import { useApi } from '../hooks/useApi';
 import type { Exercise, Routine, Workout, WorkoutExerciseEntry } from '../types';
 import { volumeMuscle, volumeMuscleName, type MuscleVolumeRow } from '../utils/volumeGuideline';
-import { analysePlan, KIND_LABEL, redundantPairs, type PlanWarning, type WarningKind } from '../utils/planAnalysis';
+import { analysePlan, redundantPairs, type PlanWarning } from '../utils/planAnalysis';
+import RoutineReview from '../components/RoutineReview';
+import RoutineFineTuning from '../components/RoutineFineTuning';
 import MuscleExercisePicker from '../components/MuscleExercisePicker';
 import WeekBoard, { type BoardItem } from '../components/WeekBoard';
 import { DAY_TYPES } from '../data/routineTemplates';
@@ -13,9 +15,7 @@ import { jointActionName, muscleName, planeName, plural, WEEKDAYS } from '../dat
 
 const DAY_TYPE_LABELS: Record<string, string> = { upper: 'Upper', lower: 'Lower', push: 'Push', pull: 'Pull', legs: 'Legs', full_body: 'Full Body', custom: 'Otro' };
 
-// Alternatives for one slot. "Equivalente" = same muscle, same joint action and same
-// plane, so the swap keeps the stimulus; the rest of the muscle's exercises are offered
-// separately because they change what the slot trains.
+// Alternatives share broad metadata; this does not establish equal stimulus.
 function SwapPanel({ slot, inDay, exercises, onPick, onClose }: { slot: WorkoutExerciseEntry; inDay: Set<number>; exercises: Exercise[]; onPick: (ex: Exercise) => void; onClose: () => void }) {
   const [showOthers, setShowOthers] = useState(false);
   const sameMuscle = exercises.filter(e => e.muscle === slot.muscle && e.id !== slot.exercise_id);
@@ -33,21 +33,23 @@ function SwapPanel({ slot, inDay, exercises, onPick, onClose }: { slot: WorkoutE
         <div><strong>Cambiar {slot.name}</strong><span>Se mantienen series, reps, RIR, descanso y posición. Las series que ya registraste quedan en el historial del ejercicio anterior.</span></div>
         <button className="quiet-button" onClick={onClose}>Cerrar</button>
       </div>
-      <p className="swap-label">Equivalentes · {muscleName(slot.muscle).toLowerCase()}, {jointActionName(slot.joint_action)}, plano {planeName(slot.plane)}</p>
+      <p className="swap-label">Mismo patrón general · {muscleName(slot.muscle).toLowerCase()}, {jointActionName(slot.joint_action)}, plano {planeName(slot.plane)}</p>
       {exact.length ? <div className="swap-list">{exact.map(option)}</div> : <p className="helper-text">No hay otro ejercicio con el mismo músculo, acción y plano en la biblioteca.</p>}
       {others.length > 0 && <>
-        <button className="link-button" onClick={() => setShowOthers(v => !v)}>{showOthers ? 'Ocultar' : 'Ver'} otros ejercicios de {muscleName(slot.muscle).toLowerCase()} ({others.length}) · cambian el estímulo</button>
+        <button className="link-button" onClick={() => setShowOthers(v => !v)}>{showOthers ? 'Ocultar' : 'Ver'} otros ejercicios de {muscleName(slot.muscle).toLowerCase()} ({others.length}) · compara la ejecución</button>
         {showOthers && <div className="swap-list">{others.map(option)}</div>}
       </>}
     </div>
   );
 }
 
-function WorkoutCard({ workout, exercisesLibrary, volumeByMuscle, highlightMuscle, onChanged, onDeleted }: {
+function WorkoutCard({ workout, exercisesLibrary, volumeByMuscle, highlightMuscle, registerFlush, onEdited, onChanged, onDeleted }: {
   workout: Workout;
   exercisesLibrary: Exercise[];
   volumeByMuscle: Map<string, MuscleVolumeRow>;
   highlightMuscle: string | null;
+  registerFlush: (id: number, flush: (() => Promise<void>) | null) => void;
+  onEdited: () => void;
   onChanged: () => void;
   onDeleted: () => void;
 }) {
@@ -73,13 +75,14 @@ function WorkoutCard({ workout, exercisesLibrary, volumeByMuscle, highlightMuscl
   }, [workout.id]);
 
   function persist(list: WorkoutExerciseEntry[], name: string = workout.name) {
+    onEdited();
+    if (pending.current === list) pending.current = null;
     const next = saveQueue.current.then(() => save(list, name));
     saveQueue.current = next;
     return next;
   }
 
   async function save(list: WorkoutExerciseEntry[], name: string) {
-    pending.current = null;
     setError('');
     try {
       await api.put(`/api/workouts/${workout.id}`, {
@@ -97,15 +100,23 @@ function WorkoutCard({ workout, exercisesLibrary, volumeByMuscle, highlightMuscl
 
   async function flush() {
     if (saveTimeout.current) { clearTimeout(saveTimeout.current); saveTimeout.current = null; }
-    if (pending.current) await persist(pending.current);
+    if (pending.current) { if (!await persist(pending.current)) throw new Error('No se pudieron guardar tus cambios.'); }
+    if (!await saveQueue.current) throw new Error('Revisa los cambios pendientes del día antes de ajustar.');
   }
+
+  useEffect(() => {
+    registerFlush(workout.id, flush);
+    return () => { registerFlush(workout.id, null); };
+  });
 
   function persistNow(list: WorkoutExerciseEntry[], name?: string) {
     if (saveTimeout.current) { clearTimeout(saveTimeout.current); saveTimeout.current = null; }
+    pending.current = null;
     persist(list, name);
   }
 
   function persistDebounced(list: WorkoutExerciseEntry[]) {
+    onEdited();
     if (saveTimeout.current) clearTimeout(saveTimeout.current);
     pending.current = list;
     saveTimeout.current = setTimeout(() => persist(list), 500);
@@ -208,7 +219,7 @@ function WorkoutCard({ workout, exercisesLibrary, volumeByMuscle, highlightMuscl
 
       {duplicateId && <p role="status" className="helper-text">Día duplicado con sus ejercicios, series, repeticiones, RIR y descansos. <a href={`#day-${duplicateId}`}>Ver copia</a>. Asígnala a otro día en la semana fija. Las dos versiones se editan por separado.</p>}
 
-      {exercises.length > 0 && <div className="ex-row ex-head" aria-hidden="true"><span /><span /><span>Ejercicio</span><span>Series</span><span>Reps</span><span>RIR</span><span>Desc. s</span><span /></div>}
+      {exercises.length > 0 && <div className="ex-row ex-head" aria-hidden="true"><span /><span /><span>Ejercicio</span><span>Series</span><span>Reps</span><span>RIR</span><span>Desc. min</span><span /></div>}
       {exercises.map((ex, i) => {
         const guideline = volumeByMuscle.get(volumeMuscle(ex.muscle));
         const pair = redundant.get(ex.exercise_id);
@@ -226,12 +237,12 @@ function WorkoutCard({ workout, exercisesLibrary, volumeByMuscle, highlightMuscl
               <div className="ex-name">
                 <Link to={`/app/exercises/${ex.exercise_id}/progress`}>{ex.name}</Link>
                 <span>{muscleName(ex.muscle)} · {jointActionName(ex.joint_action)}{guideline?.baseline ? ` · TNF ${baselineLabel(guideline.baseline)} series directas/día (${guideline.frequency} días/sem)` : ''}</span>
-                {pair && <span className="ex-flag">Redundante con {pair.other}: mismo músculo y misma acción. <button className="link-button" onClick={() => setSwapping(ex.exercise_id)}>Cambiar uno</button></span>}
+                {pair && <span className="ex-flag">Ejercicio repetido: {pair.other}. <button className="link-button" onClick={() => setSwapping(ex.exercise_id)}>Cambiar uno</button></span>}
               </div>
               <label className="ex-num"><small>Series</small>{numberCell(ex.target_sets, 'target_sets', ex.exercise_id, 'Series')}</label>
               <label className="ex-num reps"><small>Reps</small>{numberCell(ex.rep_range_min, 'rep_range_min', ex.exercise_id, 'Reps mínimo')}<i>–</i>{numberCell(ex.rep_range_max, 'rep_range_max', ex.exercise_id, 'Reps máximo')}</label>
               <label className="ex-num"><small>RIR</small>{numberCell(ex.rir_target, 'rir_target', ex.exercise_id, 'RIR objetivo')}</label>
-              <label className="ex-num"><small>Desc. s</small>{numberCell(ex.rest_seconds, 'rest_seconds', ex.exercise_id, 'Descanso en segundos')}</label>
+              <label className="ex-num"><small>Desc. min</small><input type="number" inputMode="decimal" min="0" step="0.5" aria-label="Descanso en minutos" value={ex.rest_seconds == null ? '' : ex.rest_seconds / 60} onChange={e => updateField(ex.exercise_id, 'rest_seconds', e.target.value === '' ? null : Math.round(Number(e.target.value) * 60))} /></label>
               <span className="ex-actions">
                 <button className="chip-button" onClick={() => setSwapping(swapping === ex.exercise_id ? null : ex.exercise_id)} aria-expanded={swapping === ex.exercise_id}>Cambiar</button>
                 <button className="icon-button" onClick={() => removeExercise(ex.exercise_id)} aria-label={`Quitar ${ex.name}`} title="Quitar">×</button>
@@ -290,25 +301,12 @@ function MuscleSummary({ rows, selected, onSelect }: { rows: MuscleVolumeRow[]; 
   );
 }
 
-function Warnings({ warnings, onFocus }: { warnings: PlanWarning[]; onFocus: (w: PlanWarning) => void }) {
-  const kinds = (Object.keys(KIND_LABEL) as WarningKind[]).filter(k => warnings.some(w => w.kind === k));
-  if (!warnings.length) return <section className="panel warnings ok"><h2>Avisos</h2><p className="helper-text">Sin avisos con estas referencias. El baseline de TNF no sustituye revisar tu progreso y recuperación.</p></section>;
-  return (
-    <section className="panel warnings">
-      <div className="section-heading"><div><h2>Avisos · {warnings.length}</h2><p className="helper-text">Volumen: baseline TNF por día según frecuencia, para series directas a 0–1 RIR (manual, págs. 18–19). Se recalcula al editar la semana.</p></div></div>
-      {kinds.map(kind => (
-        <div key={kind} className="warning-group">
-          <span className={`warning-kind k-${kind}`}>{KIND_LABEL[kind]}</span>
-          <ul>{warnings.filter(w => w.kind === kind).map(w => (
-            <li key={w.key}><button className="warning-item" onClick={() => onFocus(w)}><strong>{w.title}</strong><span>{w.detail}</span></button></li>
-          ))}</ul>
-        </div>
-      ))}
-    </section>
-  );
+export default function RoutineDetail() {
+  const { id } = useParams();
+  return <RoutineEditor key={id} />;
 }
 
-export default function RoutineDetail() {
+function RoutineEditor() {
   const { id } = useParams();
   const { data: routines, loading, reload, setData } = useApi(() => api.get<Routine[]>('/api/routines'));
   const { data: allExercises } = useApi(() => api.get<Exercise[]>('/api/exercises'));
@@ -318,18 +316,44 @@ export default function RoutineDetail() {
   const [adding, setAdding] = useState(false);
   const [error, setError] = useState('');
 
+  const [reviewedKey, setReviewedKey] = useState('');
+  const [optimizing, setOptimizing] = useState(false);
+  const [finishing, setFinishing] = useState(false);
+  function edited() { setReviewedKey(''); setOptimizing(false); setTuningLocked(false); }
+  const [tuningLocked, setTuningLocked] = useState(false);
+  const [revision, setRevision] = useState(0);
+  const flushers = useRef(new Map<number, () => Promise<void>>());
+  async function flushDays() { await Promise.all([...flushers.current.values()].map(flush => flush())); }
+  function registerFlush(workoutId: number, flush: (() => Promise<void>) | null) { if (flush) flushers.current.set(workoutId, flush); else flushers.current.delete(workoutId); }
+  function tuned(updated: Routine) { setReviewedKey(JSON.stringify(updated)); setData(rs => rs && rs.map(r => r.id === updated.id ? updated : r)); setRevision(v => v + 1); }
+
   const routine = routines?.find(r => r.id === Number(id));
+
+  async function finishRoutine() {
+    if (!routine) return;
+    setFinishing(true); setError('');
+    try {
+      await flushDays();
+      const latest = await api.get<Routine[]>('/api/routines');
+      const saved = latest.find(r=>r.id===routine.id);
+      if (!saved) throw new Error('No se encontró la rutina.');
+      setData(latest); setReviewedKey(JSON.stringify(saved)); setOptimizing(false);
+      setTimeout(()=>document.getElementById('routine-review')?.scrollIntoView({behavior:'smooth',block:'start'}),0);
+    } catch(e) { setError(e instanceof Error ? e.message : 'No se pudo terminar.'); }
+    finally { setFinishing(false); }
+  }
 
   async function addWorkout(name: string) {
     if (!routine || !name.trim()) return;
     await api.post(`/api/routines/${routine.id}/workouts`, { name: name.trim(), day_index: routine.workouts.length, exercises: [] });
-    setAdding(false);
+    edited(); setAdding(false);
     reload();
   }
 
   async function assign(workoutId: number, weekday: number | null) {
     if (!routine) return;
     setError('');
+    edited();
     // Optimistic: move the card now, roll back if the server refuses.
     const previous = routines;
     setData(rs => rs && rs.map(r => r.id !== routine.id ? r : { ...r, workouts: r.workouts.map(w => w.id === workoutId ? { ...w, weekday } : w) }));
@@ -358,6 +382,7 @@ export default function RoutineDetail() {
   if (loading && !routines) return <span className="muted-note">Cargando…</span>;
   if (!routine) return <span className="error-text">No se encontró el programa.</span>;
 
+  const reviewed = reviewedKey === JSON.stringify(routine);
   const allMuscles = [...new Set((allExercises || []).map(e => e.muscle))];
   const analysis = analysePlan(routine, allMuscles);
   const volumeByMuscle = new Map(analysis.rows.map(r => [r.muscle, r]));
@@ -378,6 +403,7 @@ export default function RoutineDetail() {
           : <h1><button className="title-button" onClick={() => { setNameDraft(routine.name); setEditingName(true); }} title="Renombrar">{routine.name}</button></h1>}
         {!routine.is_active && <p className="helper-text">Este programa no está activo: su semana no aparece en Mi resumen.</p>}
       </div>
+      <button className="btn-primary" disabled={finishing || tuningLocked} onClick={finishRoutine}>{finishing ? 'Guardando…' : 'Terminar rutina'}</button>
     </div>
 
     <section className="panel">
@@ -390,11 +416,16 @@ export default function RoutineDetail() {
       {error && <p className="error-text" role="alert">{error}</p>}
     </section>
 
-    <Warnings warnings={analysis.warnings} onFocus={focus} />
-    <MuscleSummary rows={analysis.rows} selected={highlightMuscle} onSelect={setHighlightMuscle} />
-
+    <fieldset disabled={tuningLocked} className="routine-edit-fields">
     {ordered.map(w => (
-      <WorkoutCard key={w.id} workout={w} exercisesLibrary={allExercises || []} volumeByMuscle={volumeByMuscle} highlightMuscle={highlightMuscle} onChanged={reload} onDeleted={reload} />
+      <WorkoutCard onEdited={edited} registerFlush={registerFlush} key={`${w.id}-${revision}`} workout={w} exercisesLibrary={allExercises || []} volumeByMuscle={volumeByMuscle} highlightMuscle={highlightMuscle} onChanged={reload} onDeleted={reload} />
     ))}
+    </fieldset>
+    <section className="panel"><div className="section-heading"><div><h2>Termina de elegir tus ejercicios</h2><p className="helper-text">Los cambios se guardan mientras editas. Al terminar revisaremos frecuencia, volumen y posibles repeticiones.</p></div><button className="btn-primary" disabled={finishing || tuningLocked} onClick={finishRoutine}>{finishing ? 'Guardando…' : 'Guardar y revisar rutina'}</button></div>{error && <p role="alert" className="error-text">{error}</p>}</section>
+    {reviewed && <div id="routine-review">
+      <RoutineReview key={reviewedKey} warnings={analysis.warnings} onCorrect={w => { setOptimizing(false); setTuningLocked(false); focus(w); }} onOptimize={()=>{ setOptimizing(true); setTimeout(()=>document.getElementById('tuning-title')?.scrollIntoView({behavior:'smooth',block:'start'}),0); }} />
+      <MuscleSummary rows={analysis.rows} selected={highlightMuscle} onSelect={setHighlightMuscle} />
+      {optimizing && <RoutineFineTuning key={routine.id} routine={routine} flush={flushDays} onApplied={tuned} onLock={setTuningLocked} />}
+    </div>}
   </>;
 }

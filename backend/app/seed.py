@@ -6,7 +6,8 @@ users, routines, and logged sessions in it. Muscle groups/muscles are
 get-or-created, and exercises are only inserted if no exercise with that
 exact name exists yet - so running this again after adding new exercises
 to EXERCISES tops up the library without touching anyone's existing data
-or WorkoutExercise references (which point at Exercise.id).
+or WorkoutExercise references (which point at Exercise.id). Targeted legacy
+classification fixes preserve IDs. The creator's authorized template is captured once.
 """
 
 from .database import Base, SessionLocal, engine
@@ -220,6 +221,11 @@ def run():
         )
         added += 1
 
+    # Correct legacy classifications in place; preserve exercise IDs and history.
+    for exercise in db.query(Exercise).filter(Exercise.name == "T-Bar Row").all():
+        exercise.muscle_id = muscle_by_name["upper_back"].id
+    from .creator_template import capture_creator_template
+    capture_creator_template(db)
     db.commit()
     db.close()
     print(f"Seed complete: {len(MUSCLE_GROUPS)} muscle groups checked, {added} new exercises added "

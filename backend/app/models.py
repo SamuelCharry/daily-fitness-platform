@@ -90,6 +90,19 @@ class Routine(Base):
     workouts = relationship("Workout", back_populates="routine", order_by="Workout.day_index")
 
 
+class RoutineTuning(Base):
+    __tablename__ = "routine_tuning"
+    routine_id = Column(Integer, ForeignKey("routines.id"), primary_key=True)
+    before = Column(String, nullable=False)
+    after = Column(String, nullable=False)
+
+
+class PublishedRoutineTemplate(Base):
+    __tablename__ = "published_routine_templates"
+    key = Column(String, primary_key=True)
+    payload = Column(String, nullable=False)
+
+
 class Workout(Base):
     """A day template within a routine, e.g. 'Upper', 'Push'."""
     __tablename__ = "workouts"
@@ -134,6 +147,7 @@ class WorkoutSession(Base):
     date = Column(Date, nullable=False)
     started_at = Column(DateTime(timezone=True))  # None on sessions created before it existed
     finished_at = Column(DateTime(timezone=True))
+    substitutions = Column(String)  # Session-only slot -> exercise ID mapping.
 
     workout = relationship("Workout")
     sets = relationship("SetLog", back_populates="session")
@@ -144,6 +158,8 @@ class SetLog(Base):
     id = Column(Integer, primary_key=True)
     session_id = Column(Integer, ForeignKey("workout_sessions.id"), nullable=False)
     workout_exercise_id = Column(Integer, ForeignKey("workout_exercises.id"), nullable=False)
+    performed_exercise_id = Column(Integer, ForeignKey("exercises.id"))
+    performed_exercise = relationship("Exercise")
     set_number = Column(Integer, nullable=False)
     weight = Column(Float)
     reps = Column(Integer)

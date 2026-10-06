@@ -229,7 +229,7 @@ def strength_map(
         .all()
     )
     for set_log, workout_exercise in sets:
-        exercise = db.query(Exercise).filter(Exercise.id == workout_exercise.exercise_id).first()
+        exercise = db.query(Exercise).filter(Exercise.id == (set_log.performed_exercise_id or workout_exercise.exercise_id)).first()
         if exercise is None:
             continue
         muscle_name = exercise.muscle.name
