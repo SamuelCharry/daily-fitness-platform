@@ -1,58 +1,61 @@
-// Weekly volume check, compared against the per-muscle targets in
-// muscleVolumeTargets.ts (pulled from the user's own program) rather than a
-// generic textbook formula. A muscle flagged `isFloor` in that table is a
-// minimum to clear, not a ceiling to avoid — so it never gets flagged "high".
-import type { Routine } from '../types';
-import { targetFor } from '../data/muscleVolumeTargets';
-
-export interface VolumeStatus {
+import type { Routine, Workout } from '../types';
+import { baselineFor, type VolumeBaseline } from '../data/muscleVolumeTargets';
+import { muscleName } from '../data/labels';
+// TNF groups chest regions together and trapezius/rhomboids together.
+// Only the library's primary muscle is counted; no invented indirect-set credit.
+export function volumeMuscle(muscle: string): string {
+  if (muscle === 'upper_pec' || muscle === 'lower_pec') return 'chest';
+  return muscle === 'traps' ? 'upper_back' : muscle;
+}
+export function volumeMuscleName(muscle: string): string {
+  return muscle === 'upper_back' ? 'Espalda alta / trapecios' : muscleName(muscle);
+}
+export interface VolumeDay {
+  weekday: number | null;
+  workoutIds: number[];
+  names: string[];
+  sets: number;
+}
+export interface MuscleVolumeRow {
+  muscle: string;
   frequency: number;
   weeklySets: number;
-  target: number | null;
-  isFloor: boolean;
-  status: 'missing' | 'low' | 'ok' | 'high';
+  baseline: VolumeBaseline | null;
+  days: VolumeDay[];
+  status: 'missing' | 'low' | 'ok' | 'high' | 'mixed';
 }
-
-export function evaluateVolume(frequency: number, weeklySets: number, muscle: string): VolumeStatus {
-  const t = targetFor(muscle);
-  const target = t ? t.weeklySets : null;
-  const isFloor = t?.isFloor ?? false;
-
-  if (frequency === 0) {
-    return { frequency, weeklySets, target, isFloor, status: 'missing' };
-  }
-  if (target == null) {
-    return { frequency, weeklySets, target, isFloor, status: 'ok' };
-  }
-
-  const lowBound = target * 0.75;
-  const highBound = isFloor ? Infinity : target * 1.35;
-
-  const status: VolumeStatus['status'] = weeklySets < lowBound ? 'low' : weeklySets > highBound ? 'high' : 'ok';
-  return { frequency, weeklySets, target, isFloor, status };
+export function evaluateVolume(days: VolumeDay[]): Pick<MuscleVolumeRow, 'frequency' | 'weeklySets' | 'baseline' | 'status'> {
+  const frequency = days.length;
+  const weeklySets = days.reduce((n, d) => n + d.sets, 0);
+  const baseline = baselineFor(frequency);
+  if (!baseline) return { frequency, weeklySets, baseline, status: 'missing' };
+  const low = days.some(d => d.sets < baseline.min);
+  const high = baseline.max != null && days.some(d => d.sets > baseline.max!);
+  return { frequency, weeklySets, baseline, status: low && high ? 'mixed' : low ? 'low' : high ? 'high' : 'ok' };
 }
-
-export interface MuscleVolumeRow extends VolumeStatus {
-  muscle: string;
-}
-
-// Aggregates target sets and frequency per muscle across a routine's workouts, and
-// fills in any muscle from `allMuscles` that the routine doesn't train at all - so
-// a fully-missing muscle group shows up as a gap instead of silently not appearing.
 export function computeMuscleVolumeRows(routine: Routine, allMuscles: string[]): MuscleVolumeRow[] {
-  const byMuscle = new Map<string, { sets: number; workoutIds: Set<number> }>();
-  for (const w of routine.workouts) {
+  const scheduled = routine.workouts.filter(w => w.weekday != null);
+  return volumeRowsFor(scheduled.length ? scheduled : routine.workouts, allMuscles);
+}
+export function volumeRowsFor(workouts: Workout[], allMuscles: string[]): MuscleVolumeRow[] {
+  const byMuscle = new Map<string, Map<string, VolumeDay>>();
+  for (const w of workouts) {
+    const dayKey = w.weekday == null ? `workout-${w.id}` : `weekday-${w.weekday}`;
     for (const ex of w.exercises) {
-      const cur = byMuscle.get(ex.muscle) || { sets: 0, workoutIds: new Set<number>() };
-      cur.sets += ex.target_sets || 0;
-      cur.workoutIds.add(w.id);
-      byMuscle.set(ex.muscle, cur);
+      const sets = ex.target_sets ?? 0;
+      if (sets <= 0) continue;
+      const muscle = volumeMuscle(ex.muscle);
+      const days = byMuscle.get(muscle) || new Map<string, VolumeDay>();
+      const day = days.get(dayKey) || { weekday: w.weekday, workoutIds: [], names: [], sets: 0 };
+      day.sets += sets;
+      if (!day.workoutIds.includes(w.id)) { day.workoutIds.push(w.id); day.names.push(w.name); }
+      days.set(dayKey, day); byMuscle.set(muscle, days);
     }
   }
-
-  const musclesToShow = new Set([...allMuscles, ...byMuscle.keys()]);
-  return [...musclesToShow].sort().map((muscle) => {
-    const data = byMuscle.get(muscle) || { sets: 0, workoutIds: new Set<number>() };
-    return { muscle, ...evaluateVolume(data.workoutIds.size, data.sets, muscle) };
-  });
+  return [...new Set([...allMuscles.map(volumeMuscle), ...byMuscle.keys()])]
+    .sort((a, b) => volumeMuscleName(a).localeCompare(volumeMuscleName(b)))
+    .map(muscle => {
+      const days = [...(byMuscle.get(muscle)?.values() || [])].sort((a, b) => (a.weekday ?? 9) - (b.weekday ?? 9));
+      return { muscle, days, ...evaluateVolume(days) };
+    });
 }

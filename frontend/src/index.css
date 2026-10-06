@@ -430,8 +430,8 @@ table { border-collapse: collapse; font-variant-numeric: tabular-nums; text-alig
 .muscle-summary[open] summary::before { content: '▾'; }
 .muscle-summary[open] summary { margin-bottom: 14px; }
 .status-pill { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; padding: 3px 7px; border-radius: 4px; background: var(--bg-raised); }
-.status-pill.s-missing, .status-pill.s-low { background: var(--danger-soft); color: var(--danger); }
-.status-pill.s-high { background: var(--warning-soft); color: var(--warning); }
+.status-pill.s-missing { color: var(--text-muted); }
+.status-pill.s-low, .status-pill.s-high, .status-pill.s-mixed { background: var(--warning-soft); color: var(--warning); }
 .status-pill.s-ok { background: var(--success-soft); color: var(--success); }
 .day-card { display: flex; flex-direction: column; gap: 2px; }
 .day-card-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 14px; }

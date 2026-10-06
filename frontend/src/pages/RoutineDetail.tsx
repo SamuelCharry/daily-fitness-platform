@@ -3,12 +3,12 @@ import { Link, useParams } from 'react-router-dom';
 import { api } from '../api';
 import { useApi } from '../hooks/useApi';
 import type { Exercise, Routine, Workout, WorkoutExerciseEntry } from '../types';
-import type { MuscleVolumeRow } from '../utils/volumeGuideline';
+import { volumeMuscle, volumeMuscleName, type MuscleVolumeRow } from '../utils/volumeGuideline';
 import { analysePlan, KIND_LABEL, redundantPairs, type PlanWarning, type WarningKind } from '../utils/planAnalysis';
 import MuscleExercisePicker from '../components/MuscleExercisePicker';
 import WeekBoard, { type BoardItem } from '../components/WeekBoard';
 import { DAY_TYPES } from '../data/routineTemplates';
-import { targetFor } from '../data/muscleVolumeTargets';
+import { baselineLabel } from '../data/muscleVolumeTargets';
 import { jointActionName, muscleName, planeName, plural, WEEKDAYS } from '../data/labels';
 
 const DAY_TYPE_LABELS: Record<string, string> = { upper: 'Upper', lower: 'Lower', push: 'Push', pull: 'Pull', legs: 'Legs', full_body: 'Full Body', custom: 'Otro' };
@@ -210,12 +210,12 @@ function WorkoutCard({ workout, exercisesLibrary, volumeByMuscle, highlightMuscl
 
       {exercises.length > 0 && <div className="ex-row ex-head" aria-hidden="true"><span /><span /><span>Ejercicio</span><span>Series</span><span>Reps</span><span>RIR</span><span>Desc. s</span><span /></div>}
       {exercises.map((ex, i) => {
-        const guideline = volumeByMuscle.get(ex.muscle);
+        const guideline = volumeByMuscle.get(volumeMuscle(ex.muscle));
         const pair = redundant.get(ex.exercise_id);
         return (
           <div key={ex.exercise_id}>
             <div
-              className={`ex-row${highlightMuscle === ex.muscle ? ' highlighted' : ''}${dragIndex === i ? ' dragging' : ''}`}
+              className={`ex-row${highlightMuscle === volumeMuscle(ex.muscle) ? ' highlighted' : ''}${dragIndex === i ? ' dragging' : ''}`}
               draggable
               onDragStart={() => setDragIndex(i)}
               onDragOver={e => e.preventDefault()}
@@ -225,7 +225,7 @@ function WorkoutCard({ workout, exercisesLibrary, volumeByMuscle, highlightMuscl
               <span className="ex-index">{i + 1}</span>
               <div className="ex-name">
                 <Link to={`/app/exercises/${ex.exercise_id}/progress`}>{ex.name}</Link>
-                <span>{muscleName(ex.muscle)} · {jointActionName(ex.joint_action)}{guideline?.target != null && guideline.target > 0 ? ` · objetivo ${guideline.target}${guideline.isFloor ? '+' : ''} series/sem` : ''}</span>
+                <span>{muscleName(ex.muscle)} · {jointActionName(ex.joint_action)}{guideline?.baseline ? ` · TNF ${baselineLabel(guideline.baseline)} series directas/día (${guideline.frequency} días/sem)` : ''}</span>
                 {pair && <span className="ex-flag">Redundante con {pair.other}: mismo músculo y misma acción. <button className="link-button" onClick={() => setSwapping(ex.exercise_id)}>Cambiar uno</button></span>}
               </div>
               <label className="ex-num"><small>Series</small>{numberCell(ex.target_sets, 'target_sets', ex.exercise_id, 'Series')}</label>
@@ -255,7 +255,7 @@ function NewDayForm({ onAdd, onCancel }: { onAdd: (name: string) => void; onCanc
   const dayType = DAY_TYPES.find(d => d.key === key)!;
   const isCustom = key === 'custom';
   const name = isCustom ? custom.trim() : dayType.label;
-  const muscles = dayType.muscles.filter(m => (targetFor(m)?.weeklySets ?? 0) > 0);
+  const muscles = dayType.muscles;
   return (
     <div className="new-day">
       <div className="chip-row">{DAY_TYPES.map(d => <button key={d.key} className={`chip${key === d.key ? ' active' : ''}`} aria-pressed={key === d.key} onClick={() => setKey(d.key)}>{DAY_TYPE_LABELS[d.key] || d.label}</button>)}</div>
@@ -270,17 +270,19 @@ function NewDayForm({ onAdd, onCancel }: { onAdd: (name: string) => void; onCanc
   );
 }
 
-const STATUS_LABEL: Record<MuscleVolumeRow['status'], string> = { missing: 'Sin trabajo', low: 'Bajo', ok: 'Bien', high: 'Alto' };
+const STATUS_LABEL: Record<MuscleVolumeRow['status'], string> = { missing: 'Sin series directas', low: 'Debajo del baseline', ok: 'Dentro del baseline', high: 'Encima del baseline', mixed: 'Distribución desigual' };
 
 function MuscleSummary({ rows, selected, onSelect }: { rows: MuscleVolumeRow[]; selected: string | null; onSelect: (m: string | null) => void }) {
   return (
     <details className="panel muscle-summary">
-      <summary><h2>Resumen por músculo</h2><span className="helper-text">Series y días por semana frente a tu objetivo</span></summary>
+      <summary><h2>Resumen por músculo</h2><span className="helper-text">Series directas por día y frecuencia · baseline TNF</span></summary>
+      <p className="helper-text">TNF Muscle Building Manual, páginas 18–19: 3+ días/sem → 1–3 series/día; 2 días → 2–6; 1 día → 6+, sin máximo indicado. Supone series a 0–1 RIR. Es una referencia inicial, no una regla universal.</p>
+      <p className="helper-text">Contamos el músculo principal de cada ejercicio, sin sumar trabajo indirecto. Pecho agrupa sus regiones y espalda alta agrupa trapecios/romboides. Dos entrenos en la misma fecha cuentan como un día. Los músculos sin trabajo directo no generan avisos de volumen.</p>
       <div className="table-scroll"><table className="read-table">
-        <thead><tr><th>Músculo</th><th>Días/sem</th><th>Series/sem</th><th>Objetivo</th><th>Estado</th></tr></thead>
-        <tbody>{rows.filter(r => r.target !== 0 || r.weeklySets > 0).map(r => (
+        <thead><tr><th>Músculo</th><th>Días/sem</th><th>Series/sem</th><th>Series por día</th><th>Baseline TNF / día</th><th>Estado</th></tr></thead>
+        <tbody>{rows.map(r => (
           <tr key={r.muscle} className={`clickable${selected === r.muscle ? ' selected' : ''}`} onClick={() => onSelect(selected === r.muscle ? null : r.muscle)}>
-            <th>{muscleName(r.muscle)}</th><td>{r.frequency}</td><td>{r.weeklySets}</td><td>{r.target != null ? `${r.target}${r.isFloor ? '+' : ''}` : '—'}</td><td><span className={`status-pill s-${r.status}`}>{STATUS_LABEL[r.status]}</span></td>
+            <th>{volumeMuscleName(r.muscle)}</th><td>{r.frequency}</td><td>{r.weeklySets}</td><td>{r.days.map(d => `${d.weekday == null ? d.names.join(' + ') : WEEKDAYS[d.weekday]}: ${d.sets}`).join(' · ') || '—'}</td><td>{baselineLabel(r.baseline)}</td><td><span className={`status-pill s-${r.status}`}>{STATUS_LABEL[r.status]}</span></td>
           </tr>
         ))}</tbody>
       </table></div>
@@ -290,10 +292,10 @@ function MuscleSummary({ rows, selected, onSelect }: { rows: MuscleVolumeRow[]; 
 
 function Warnings({ warnings, onFocus }: { warnings: PlanWarning[]; onFocus: (w: PlanWarning) => void }) {
   const kinds = (Object.keys(KIND_LABEL) as WarningKind[]).filter(k => warnings.some(w => w.kind === k));
-  if (!warnings.length) return <section className="panel warnings ok"><h2>Avisos</h2><p className="helper-text">Sin problemas: volumen, frecuencia, recuperación y ejercicios repetidos están en orden.</p></section>;
+  if (!warnings.length) return <section className="panel warnings ok"><h2>Avisos</h2><p className="helper-text">Sin avisos con estas referencias. El baseline de TNF no sustituye revisar tu progreso y recuperación.</p></section>;
   return (
     <section className="panel warnings">
-      <div className="section-heading"><div><h2>Avisos · {warnings.length}</h2><p className="helper-text">Se recalculan cada vez que mueves un día o cambias un ejercicio.</p></div></div>
+      <div className="section-heading"><div><h2>Avisos · {warnings.length}</h2><p className="helper-text">Volumen: baseline TNF por día según frecuencia, para series directas a 0–1 RIR (manual, págs. 18–19). Se recalcula al editar la semana.</p></div></div>
       {kinds.map(kind => (
         <div key={kind} className="warning-group">
           <span className={`warning-kind k-${kind}`}>{KIND_LABEL[kind]}</span>
