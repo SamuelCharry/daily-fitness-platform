@@ -20,6 +20,14 @@ export interface MuscleFunction {
 
 export const MUSCLE_FUNCTIONS: MuscleFunction[] = [
   {
+    muscle: 'lower_pec', label: 'Lower Chest', groupLabel: 'Chest',
+    summary: 'Pecho inferior: énfasis en las fibras inferiores de la porción esternocostal del pectoral mayor, no un músculo independiente. Incluye press declinado y aperturas de arriba hacia abajo; el pectoral trabaja en conjunto.',
+    actions: [
+      { action: 'Horizontal Push', plane: 'Sagittal', note: 'Press declinado.' },
+      { action: 'Horizontal Adduction', plane: 'Transverse', note: 'High-to-low cable fly.' },
+    ],
+  },
+  {
     muscle: 'chest',
     label: 'Chest',
     groupLabel: 'Chest',
@@ -61,7 +69,7 @@ export const MUSCLE_FUNCTIONS: MuscleFunction[] = [
     label: 'Rear Delt',
     groupLabel: 'Shoulder',
     summary:
-      'Pulls the arm backward, away from the midline — horizontal abduction in the transverse plane (the mirror image of a chest fly). Chronically undertrained relative to the front delt because pressing dominates most programs.',
+      'Deltoide posterior: lleva el brazo hacia atrás mediante abducción horizontal. Pertenece al hombro, pero participa en muchos tirones de espalda. Reverse fly, reverse pec deck y rear delt row permiten darle trabajo directo; no es lo mismo que dorsales o trapecios.',
     actions: [{ action: 'Horizontal Abduction', plane: 'Transverse', note: 'Face pulls, reverse flyes.' }],
   },
   {
@@ -102,7 +110,7 @@ export const MUSCLE_FUNCTIONS: MuscleFunction[] = [
     label: 'Lats',
     groupLabel: 'Back',
     summary:
-      'Pulls the arm down toward the torso from two directions: from overhead (vertical pull, e.g. pulldown) and from in front of the body (shoulder extension, e.g. straight-arm pulldown, pullover). Drives back width.',
+      'Dorsales (lats): acercan el brazo al tronco mediante aducción y extensión del hombro. Se trabajan con jalones, dominadas, pullovers y remos con el codo próximo al torso. El énfasis cambia con la trayectoria del brazo; no todos los remos son equivalentes.',
     actions: [
       { action: 'Vertical Pull', plane: 'Sagittal', note: 'Pull-ups, lat pulldowns.' },
       { action: 'Shoulder Extension', plane: 'Sagittal', note: 'Straight-arm pulldown, pullover.' },
@@ -113,15 +121,18 @@ export const MUSCLE_FUNCTIONS: MuscleFunction[] = [
     label: 'Upper Back',
     groupLabel: 'Back',
     summary:
-      'Rows the arm backward toward the torso — horizontal pull in the sagittal plane, driving the shoulder blades together. Drives back thickness.',
+      'Espalda alta: región que incluye trapecio medio y romboides, entre otros músculos. Los remos combinan movimiento del brazo y retracción de las escápulas. Se diferencia de los dorsales y del deltoide posterior, aunque pueden participar juntos.',
     actions: [{ action: 'Horizontal Pull', plane: 'Sagittal', note: 'Any row variation.' }],
   },
   {
     muscle: 'traps',
     label: 'Traps',
     groupLabel: 'Back',
-    summary: 'Elevates the shoulder blades — scapular elevation in the frontal plane. Shrugs are close to the only direct way to hit this.',
-    actions: [{ action: 'Scapular Elevation', plane: 'Frontal', note: 'Shrug variations.' }],
+    summary: 'Trapecios: sus fibras superiores, medias e inferiores ayudan a elevar, retraer y controlar las escápulas. El shrug convencional enfatiza la elevación; el Kelso Shrug, con pecho apoyado y poco movimiento del codo, enfatiza la retracción junto con los romboides.',
+    actions: [
+      { action: 'Scapular Elevation', plane: 'Frontal', note: 'Shrug convencional.' },
+      { action: 'Scapular Retraction', plane: 'Transverse', note: 'Kelso Shrug: movimiento de las escápulas.' },
+    ],
   },
   {
     muscle: 'spinal_erectors',

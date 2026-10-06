@@ -4,6 +4,7 @@
 const MUSCLES: Record<string, string> = {
   chest: 'Pecho',
   upper_pec: 'Pecho superior',
+  lower_pec: 'Pecho inferior',
   front_delt: 'Deltoides frontal',
   side_delt: 'Deltoides lateral',
   rear_delt: 'Deltoides posterior',
@@ -34,6 +35,7 @@ const JOINT_ACTIONS: Record<string, string> = {
   'Incline Adduction': 'aducción inclinada',
   'Horizontal Abduction': 'abducción horizontal',
   'Scapular Elevation': 'elevación escapular',
+  'Scapular Retraction': 'retracción escapular',
   'Shoulder Extension': 'extensión de hombro',
   'Shoulder Flexion': 'flexión de hombro',
   'Shoulder Abduction': 'abducción de hombro',

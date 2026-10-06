@@ -13,7 +13,7 @@ from .database import Base, SessionLocal, engine
 from .models import Exercise, Muscle, MuscleGroup, MovementPattern
 
 MUSCLE_GROUPS = {
-    "Chest": ["chest", "upper_pec"],
+    "Chest": ["chest", "upper_pec", "lower_pec"],
     "Shoulder": ["front_delt", "side_delt", "rear_delt"],
     "Arms": ["triceps", "biceps", "brachialis", "forearms"],
     "Back": ["lats", "upper_back", "traps", "spinal_erectors"],
@@ -23,6 +23,14 @@ MUSCLE_GROUPS = {
 
 # name, youtube_url, muscle, movement_pattern, equipment, is_compound, joint_action, plane
 EXERCISES = [
+    # Regional emphasis, not separate isolated chest muscles.
+    ("Decline Barbell Press", None, "lower_pec", "Decline Press", "Barbell", True, "Horizontal Push", "Sagittal"),
+    ("Decline Dumbbell Press", None, "lower_pec", "Decline Press", "Dumbbell", True, "Horizontal Push", "Sagittal"),
+    ("High-to-Low Cable Fly", None, "lower_pec", "Fly", "Cable", False, "Horizontal Adduction", "Transverse"),
+    ("Kelso Shrug", None, "traps", "Scapular Retraction", "Dumbbell", False, "Scapular Retraction", "Transverse"),
+    ("Chest-Supported Cable Kelso Shrug", None, "traps", "Scapular Retraction", "Cable", False, "Scapular Retraction", "Transverse"),
+    ("Chest-Supported Rear Delt Row", None, "rear_delt", "Horizontal Row", "Dumbbell", True, "Horizontal Abduction", "Transverse"),
+    ("Single-Arm Cable Lat Row", None, "lats", "Horizontal Row", "Cable", True, "Shoulder Extension", "Sagittal"),
     # --- Triceps (existing) ---
     ("Cable Triceps Kickback", "https://youtu.be/FGJ64JyKod0", "triceps", "Kickback", "Cable", True, "Elbow Extension", "Sagittal"),
     ("Close-Grip Bench Press", "https://youtu.be/XnYH1RfVRKk", "triceps", "Close-Grip Press", "Barbell", False, "Elbow Extension", "Sagittal"),

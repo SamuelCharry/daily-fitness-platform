@@ -64,7 +64,7 @@ export default function ThisWeek({ plan, onChange }: { plan: WeekPlan; onChange:
       </div>
       {pendingPast.length > 0 && <p className="checkin-nudge">{pendingPast.map(i => i.name).join(', ')} {pendingPast.length === 1 ? 'quedó' : 'quedaron'} sin hacer. Arrástralo a un día que viene o entrénalo hoy.</p>}
       {!plan.items.length && <p className="helper-text">Tu programa no tiene días asignados a la semana. <Link to={`/app/routines/${plan.routine.id}`}>Asígnalos aquí</Link>.</p>}
-      {plan.items.length > 0 && <WeekBoard items={items} days={days} onMove={move} />}
+      <WeekBoard items={items} days={days} onMove={move} emptyText={plan.unscheduled.length && !plan.items.length ? 'Sin asignar' : 'Descanso'} />
       {plan.unscheduled.length > 0 && <p className="helper-text">Sin día fijo: {plan.unscheduled.map(u => u.name).join(', ')}.</p>}
       {error && <p className="error-text" role="alert">{error}</p>}
     </section>

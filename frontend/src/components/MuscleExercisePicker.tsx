@@ -12,7 +12,8 @@ export default function MuscleExercisePicker({ onPick }: { onPick: (ex: Exercise
   const [muscle, setMuscle] = useState<string | null>(null);
   const [search, setSearch] = useState('');
 
-  const musclesInGroup = MUSCLE_FUNCTIONS.filter((m) => m.groupLabel === group);
+  // Rear delts remain anatomically in Shoulder, but are also discoverable in Back.
+  const musclesInGroup = MUSCLE_FUNCTIONS.filter((m) => m.groupLabel === group || (group === 'Back' && m.muscle === 'rear_delt'));
   const activeMuscle = muscle ?? musclesInGroup[0]?.muscle ?? null;
   const fn = activeMuscle ? muscleFunctionFor(activeMuscle) : undefined;
   const isSearching = search.trim().length > 0;
@@ -78,13 +79,14 @@ export default function MuscleExercisePicker({ onPick }: { onPick: (ex: Exercise
 
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
             {musclesInGroup.map((m) => (
-              <span
+              <button
+                type="button"
                 key={m.muscle}
                 className={`chip${activeMuscle === m.muscle ? ' active' : ''}`}
                 onClick={() => setMuscle(m.muscle)}
               >
                 {m.label}
-              </span>
+              </button>
             ))}
           </div>
 

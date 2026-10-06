@@ -141,6 +141,13 @@ class PersistenceAndAccessTests(unittest.TestCase):
         sync = {'X-Sync-Key': key}
         saved = self.client.post(url, headers=sync, json={'date': 'ayer', 'steps': '8.432', 'sleep_hours': '7,5'}).json()
         self.assertEqual(saved['saved'], {'steps': 8432, 'sleep_minutes': 450})
+        calories = self.client.post(url, headers=sync, json={'date': 'ayer', 'calories': '2450,5'}).json()
+        self.assertEqual(calories['saved'], {'calories': 2450.5})
+        yesterday = self.client.get('/api/body-stats', headers=self.headers).json()
+        row = next(r for r in yesterday if r['date'] == saved['date'])
+        self.assertEqual((row['calories'], row['steps'], row['sleep_minutes']), (2450.5, 8432, 450))
+        for invalid in [-1, 20001, 'abc']:
+            self.assertEqual(self.client.post(url, headers=sync, json={'calories': invalid}).status_code, 422)
         self.assertEqual(self.client.post(url, headers=sync, json={}).status_code, 422)
         self.assertEqual(self.client.post(url, headers=sync, json={'date': '2001-01-01', 'steps': 1}).status_code, 422)
         # The key can't be used as a normal session, and a new key replaces the old one.
@@ -156,6 +163,41 @@ class PersistenceAndAccessTests(unittest.TestCase):
         headers = {'Authorization': f'Bearer {token}'}
         self.assertEqual(self.client.get('/api/body-stats', headers=headers).json(), [])
         self.assertEqual(self.client.get('/api/routines', headers=headers).json(), [])
+
+    def test_duplicate_day_preserves_settings_not_history_and_is_private(self):
+        exercise = self.client.get('/api/exercises', headers=self.headers).json()[0]
+        routine = self.client.post('/api/routines', headers=self.headers, json={'name': 'Twice legs'}).json()
+        source = self.client.post(f"/api/routines/{routine['id']}/workouts", headers=self.headers, json={
+            'name': 'Legs', 'exercises': [{'exercise_id': exercise['id'], 'target_sets': 4,
+            'rep_range_min': 6, 'rep_range_max': 10, 'rir_target': 2, 'rest_seconds': 180, 'comments': 'Keep this'}]}).json()
+        self.client.put(f"/api/routines/{routine['id']}/schedule", headers=self.headers,
+            json={'assignments': [{'workout_id': source['id'], 'weekday': 2}]})
+        session = self.client.post('/api/sessions', headers=self.headers, json={'workout_id': source['id']}).json()
+        self.client.post(f"/api/sessions/{session['id']}/sets", headers=self.headers,
+            json={'workout_exercise_id': source['exercises'][0]['id'], 'set_number': 1, 'weight': 50, 'reps': 8})
+        copy = self.client.post(f"/api/workouts/{source['id']}/duplicate", headers=self.headers).json()
+        self.assertNotEqual(source['id'], copy['id'])
+        self.assertIsNone(copy['weekday'])
+        self.assertEqual(copy['history_exercises'], [])
+        for field in ['exercise_id', 'target_sets', 'rep_range_min', 'rep_range_max', 'rir_target', 'rest_seconds', 'comments']:
+            self.assertEqual(copy['exercises'][0][field], source['exercises'][0][field])
+        self.assertNotEqual(copy['exercises'][0]['id'], source['exercises'][0]['id'])
+        with SessionLocal() as db:
+            from app.models import WorkoutSession
+            self.assertEqual(db.query(WorkoutSession).filter(WorkoutSession.workout_id == copy['id']).count(), 0)
+        other = self.client.post('/api/auth/register', json={'email': 'duplicate-check@example.com', 'password': 'isolated-test-password'}).json()
+        self.assertEqual(self.client.post(f"/api/workouts/{source['id']}/duplicate",
+            headers={'Authorization': f"Bearer {other['access_token']}"}).status_code, 404)
+        self.assertEqual(self.client.post(f"/api/workouts/{source['id']}/duplicate").status_code, 401)
+
+    def test_library_update_is_additive_and_idempotent(self):
+        before = self.client.get('/api/exercises', headers=self.headers).json()
+        run()
+        after = self.client.get('/api/exercises', headers=self.headers).json()
+        self.assertEqual([(e['id'], e['name']) for e in before], [(e['id'], e['name']) for e in after])
+        by_name = {e['name']: e for e in after}
+        self.assertEqual(by_name['High-to-Low Cable Fly']['muscle'], 'lower_pec')
+        self.assertEqual(by_name['Kelso Shrug']['joint_action'], 'Scapular Retraction')
 
     def test_spa_deep_links_and_api_404(self):
         self.assertEqual(self.client.get('/app/routines').status_code, 200)

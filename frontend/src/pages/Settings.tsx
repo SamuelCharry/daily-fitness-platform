@@ -70,7 +70,7 @@ function PhoneSync() {
   return (
     <section className="panel sync-panel">
       <div className="section-heading">
-        <div><h2>Sincronizar con iPhone</h2><p className="helper-text">Un Atajo de iOS lee pasos y sueño de Salud y los envía solo cada día. Lo que llegue reemplaza el valor de ese día.</p></div>
+        <div><h2>Sincronizar con iPhone</h2><p className="helper-text">Un Atajo de iOS envía pasos, sueño, peso o calorías consumidas desde Salud. Cada envío reemplaza solo los campos enviados de ese día.</p></div>
         <span className={`status-pill ${data?.active ? 's-ok' : ''}`}>{data?.active ? 'Activa' : 'Sin configurar'}</span>
       </div>
       {local && <p className="checkin-nudge">Estás en la versión local (127.0.0.1): el iPhone no puede llegar aquí. Configura esto desde la app publicada en Railway.</p>}
@@ -89,7 +89,8 @@ function PhoneSync() {
           <li><strong>Buscar muestras de Salud</strong>: tipo <em>Pasos</em>, fecha de inicio <em>es hoy</em>.</li>
           <li><strong>Calcular estadísticas</strong>: <em>Suma</em> de las muestras.</li>
           <li><strong>Obtener contenido de URL</strong>: pega la dirección, método <em>POST</em>, encabezado <code>X-Sync-Key</code> con tu clave, cuerpo <em>JSON</em> con el campo <code>steps</code> = la suma.</li>
-          <li>Crea otro atajo «Enviar sueño»: <strong>Buscar muestras de Salud</strong> de tipo <em>Análisis del sueño</em>, fecha de inicio <em>en las últimas 18 horas</em> y valor <em>Dormido</em>; luego <strong>Obtener detalles</strong> → <em>Duración</em>, <strong>Calcular estadísticas</strong> → <em>Suma</em>, y envíalo igual pero con el campo <code>sleep_hours</code>.</li>
+          <li>Crea otro atajo «Enviar sueño»: <strong>Buscar muestras de Salud</strong> de tipo <em>Análisis del sueño</em>, fecha de inicio <em>en las últimas 18 horas</em> y valor <em>Dormido</em>; luego <strong>Obtener detalles</strong> → <em>Duración</em>, <strong>Calcular estadísticas</strong> → <em>Suma</em>. Comprueba la unidad: envía <code>sleep_hours</code> si son horas o <code>sleep_minutes</code> si son minutos. Divide entre 3600 solo si la duración está en segundos. Evita sumar muestras duplicadas de distintas fuentes.</li>
+          <li>Para «Enviar calorías»: busca <strong>Energía alimentaria / Dietary Energy</strong> de hoy, en <em>kcal</em>, suma los valores y envía un campo JSON numérico <code>calories</code> con esa suma. Se guarda en <strong>Check-in diario → Calorías</strong>. No uses energía activa ni calorías quemadas: ese campo registra comida consumida.</li>
           <li>En <strong>Automatización</strong>, crea dos de tipo <em>Hora del día</em>, diarias y con <em>Ejecutar inmediatamente</em>: «Enviar sueño» a las 10:00 y «Enviar pasos» a las 23:30.</li>
           <li>La primera vez, añade <strong>Mostrar resultado</strong> al final: la app responde qué guardó (por ejemplo <code>{'{"steps": 8432}'}</code>). Si el sueño sale en una unidad rara, envíalo como <code>sleep_minutes</code>.</li>
         </ol>

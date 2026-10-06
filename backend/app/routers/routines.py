@@ -201,6 +201,35 @@ def create_workout(
     return _serialize_workout(workout)
 
 
+@router.post("/workouts/{workout_id}/duplicate")
+def duplicate_workout(
+    workout_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    source = db.query(Workout).join(Routine).filter(
+        Workout.id == workout_id, Routine.user_id == current_user.id
+    ).first()
+    if source is None:
+        raise HTTPException(status_code=404, detail="Workout not found")
+    # A separate day with independent settings; never copy sessions or logged sets.
+    clone = Workout(routine_id=source.routine_id, name=f"{source.name} · copia",
+                    day_index=max((w.day_index or 0 for w in source.routine.workouts), default=-1) + 1,
+                    weekday=None)
+    db.add(clone)
+    db.flush()
+    for slot in source.exercises:
+        if not _is_retired(slot):
+            db.add(WorkoutExercise(workout_id=clone.id, exercise_id=slot.exercise_id,
+                order_index=slot.order_index, target_sets=slot.target_sets,
+                rep_range_min=slot.rep_range_min, rep_range_max=slot.rep_range_max,
+                rir_target=slot.rir_target, rest_seconds=slot.rest_seconds,
+                comments=slot.comments, retired=False))
+    db.commit()
+    db.refresh(clone)
+    return _serialize_workout(clone)
+
+
 @router.put("/workouts/{workout_id}")
 def update_workout(
     workout_id: int,

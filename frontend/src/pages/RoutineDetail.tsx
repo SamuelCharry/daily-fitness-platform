@@ -57,11 +57,14 @@ function WorkoutCard({ workout, exercisesLibrary, volumeByMuscle, highlightMuscl
   const [nameDraft, setNameDraft] = useState(workout.name);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [error, setError] = useState('');
+  const [duplicating, setDuplicating] = useState(false);
+  const [duplicateId, setDuplicateId] = useState<number | null>(null);
   // Local copy is the source of truth for rendering: PUTs are debounced, so editing two
   // cells from `workout.exercises` would race. It resyncs only on a genuine day switch.
   const [exercises, setExercises] = useState<WorkoutExerciseEntry[]>(workout.exercises);
   const saveTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pending = useRef<WorkoutExerciseEntry[] | null>(null);
+  const saveQueue = useRef<Promise<boolean>>(Promise.resolve(true));
   const redundant = redundantPairs(exercises);
 
   useEffect(() => {
@@ -69,7 +72,13 @@ function WorkoutCard({ workout, exercisesLibrary, volumeByMuscle, highlightMuscl
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [workout.id]);
 
-  async function persist(list: WorkoutExerciseEntry[], name: string = workout.name) {
+  function persist(list: WorkoutExerciseEntry[], name: string = workout.name) {
+    const next = saveQueue.current.then(() => save(list, name));
+    saveQueue.current = next;
+    return next;
+  }
+
+  async function save(list: WorkoutExerciseEntry[], name: string) {
     pending.current = null;
     setError('');
     try {
@@ -79,8 +88,10 @@ function WorkoutCard({ workout, exercisesLibrary, volumeByMuscle, highlightMuscl
         exercises: list.map((e, i) => ({ exercise_id: e.exercise_id, order_index: i, target_sets: e.target_sets, rep_range_min: e.rep_range_min, rep_range_max: e.rep_range_max, rir_target: e.rir_target, rest_seconds: e.rest_seconds, comments: e.comments })),
       });
       onChanged();
+      return true;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudo guardar.');
+      return false;
     }
   }
 
@@ -158,6 +169,19 @@ function WorkoutCard({ workout, exercisesLibrary, volumeByMuscle, highlightMuscl
     onDeleted();
   }
 
+  async function duplicateWorkout() {
+    if (duplicating) return;
+    setDuplicating(true); setDuplicateId(null); setError('');
+    try {
+      if (saveTimeout.current) { clearTimeout(saveTimeout.current); saveTimeout.current = null; }
+      // Finish queued edits before the server copies the current day's settings.
+      if (!await persist(exercises, editingName ? nameDraft.trim() || workout.name : workout.name)) return;
+      const copy = await api.post<Workout>(`/api/workouts/${workout.id}/duplicate`);
+      setDuplicateId(copy.id); onChanged();
+    } catch (err) { setError(err instanceof Error ? err.message : 'No se pudo duplicar el día.'); }
+    finally { setDuplicating(false); }
+  }
+
   function numberCell(value: number | null, field: keyof WorkoutExerciseEntry, exerciseId: number, label: string) {
     return <input type="number" inputMode="numeric" aria-label={label} value={value ?? ''} onChange={e => updateField(exerciseId, field, e.target.value === '' ? null : Number(e.target.value))} />;
   }
@@ -177,9 +201,12 @@ function WorkoutCard({ workout, exercisesLibrary, volumeByMuscle, highlightMuscl
         </div>
         <div className="routine-actions">
           <Link className="btn-ghost" to={`/app/session/${workout.id}`}>Entrenar</Link>
+          <button className="btn-ghost" disabled={duplicating} onClick={duplicateWorkout}>{duplicating ? 'Duplicando…' : 'Duplicar día'}</button>
           <button className="quiet-button" onClick={deleteWorkout}>Eliminar</button>
         </div>
       </div>
+
+      {duplicateId && <p role="status" className="helper-text">Día duplicado con sus ejercicios, series, repeticiones, RIR y descansos. <a href={`#day-${duplicateId}`}>Ver copia</a>. Asígnala a otro día en la semana fija. Las dos versiones se editan por separado.</p>}
 
       {exercises.length > 0 && <div className="ex-row ex-head" aria-hidden="true"><span /><span /><span>Ejercicio</span><span>Series</span><span>Reps</span><span>RIR</span><span>Desc. s</span><span /></div>}
       {exercises.map((ex, i) => {

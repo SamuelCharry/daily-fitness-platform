@@ -48,6 +48,7 @@ class HealthBody(BaseModel):
     sleep_hours: Number = None
     sleep_minutes: Number = None
     weight: Number = None
+    calories: Number = None  # dietary energy consumed, kcal; not active energy burned
 
 
 @router.get("/token")
@@ -122,8 +123,13 @@ def receive_health(
         if not 20 <= weight <= 400:
             raise HTTPException(status_code=422, detail="weight fuera de rango")
         values["weight"] = round(weight, 2)
+    calories = _number(body.calories, "calories")
+    if calories is not None:
+        if not 0 <= calories <= 20000:
+            raise HTTPException(status_code=422, detail="calories fuera de rango")
+        values["calories"] = calories
     if not values:
-        raise HTTPException(status_code=422, detail="Envía al menos steps, sleep_hours o weight")
+        raise HTTPException(status_code=422, detail="Envía al menos steps, sleep_hours, sleep_minutes, weight o calories")
 
     stat = db.query(BodyStat).filter(BodyStat.user_id == user.id, BodyStat.date == day).first()
     if stat is None:
