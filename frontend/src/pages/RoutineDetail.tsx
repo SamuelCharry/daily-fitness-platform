@@ -236,7 +236,7 @@ function WorkoutCard({ workout, exercisesLibrary, volumeByMuscle, highlightMuscl
               <span className="ex-index">{i + 1}</span>
               <div className="ex-name">
                 <Link to={`/app/exercises/${ex.exercise_id}/progress`}>{ex.name}</Link>
-                <span>{muscleName(ex.muscle)} · {jointActionName(ex.joint_action)}{guideline?.baseline ? ` · TNF ${baselineLabel(guideline.baseline)} series directas/día (${guideline.frequency} días/sem)` : ''}</span>
+                <span>{muscleName(ex.muscle)} · {jointActionName(ex.joint_action)}{guideline?.baseline ? ` · Referencia: ${baselineLabel(guideline.baseline)} series directas/día (${guideline.frequency} días/sem)` : ''}</span>
                 {pair && <span className="ex-flag">Ejercicio repetido: {pair.other}. <button className="link-button" onClick={() => setSwapping(ex.exercise_id)}>Cambiar uno</button></span>}
               </div>
               <label className="ex-num"><small>Series</small>{numberCell(ex.target_sets, 'target_sets', ex.exercise_id, 'Series')}</label>
@@ -286,11 +286,11 @@ const STATUS_LABEL: Record<MuscleVolumeRow['status'], string> = { missing: 'Sin 
 function MuscleSummary({ rows, selected, onSelect }: { rows: MuscleVolumeRow[]; selected: string | null; onSelect: (m: string | null) => void }) {
   return (
     <details className="panel muscle-summary">
-      <summary><h2>Resumen por músculo</h2><span className="helper-text">Series directas por día y frecuencia · baseline TNF</span></summary>
-      <p className="helper-text">TNF Muscle Building Manual, páginas 18–19: 3+ días/sem → 1–3 series/día; 2 días → 2–6; 1 día → 6+, sin máximo indicado. Supone series a 0–1 RIR. Es una referencia inicial, no una regla universal.</p>
+      <summary><h2>Resumen por músculo</h2><span className="helper-text">Series directas por día y frecuencia</span></summary>
+      <p className="helper-text">3+ días/sem → 1–3 series/día; 2 días → 2–6; 1 día → 6+, sin máximo indicado. Supone series a 0–1 RIR. Es una referencia inicial, no una regla universal.</p>
       <p className="helper-text">Contamos el músculo principal de cada ejercicio, sin sumar trabajo indirecto. Pecho agrupa sus regiones y espalda alta agrupa trapecios/romboides. Dos entrenos en la misma fecha cuentan como un día. Los músculos sin trabajo directo no generan avisos de volumen.</p>
       <div className="table-scroll"><table className="read-table">
-        <thead><tr><th>Músculo</th><th>Días/sem</th><th>Series/sem</th><th>Series por día</th><th>Baseline TNF / día</th><th>Estado</th></tr></thead>
+        <thead><tr><th>Músculo</th><th>Días/sem</th><th>Series/sem</th><th>Series por día</th><th>Referencia / día</th><th>Estado</th></tr></thead>
         <tbody>{rows.map(r => (
           <tr key={r.muscle} className={`clickable${selected === r.muscle ? ' selected' : ''}`} onClick={() => onSelect(selected === r.muscle ? null : r.muscle)}>
             <th>{volumeMuscleName(r.muscle)}</th><td>{r.frequency}</td><td>{r.weeklySets}</td><td>{r.days.map(d => `${d.weekday == null ? d.names.join(' + ') : WEEKDAYS[d.weekday]}: ${d.sets}`).join(' · ') || '—'}</td><td>{baselineLabel(r.baseline)}</td><td><span className={`status-pill s-${r.status}`}>{STATUS_LABEL[r.status]}</span></td>
@@ -403,7 +403,7 @@ function RoutineEditor() {
           : <h1><button className="title-button" onClick={() => { setNameDraft(routine.name); setEditingName(true); }} title="Renombrar">{routine.name}</button></h1>}
         {!routine.is_active && <p className="helper-text">Este programa no está activo: su semana no aparece en Mi resumen.</p>}
       </div>
-      <button className="btn-primary" disabled={finishing || tuningLocked} onClick={finishRoutine}>{finishing ? 'Guardando…' : 'Terminar rutina'}</button>
+      <button className="btn-primary" disabled={finishing || tuningLocked} onClick={finishRoutine}>{finishing ? 'Guardando…' : 'Revisar y optimizar'}</button>
     </div>
 
     <section className="panel">
@@ -421,7 +421,7 @@ function RoutineEditor() {
       <WorkoutCard onEdited={edited} registerFlush={registerFlush} key={`${w.id}-${revision}`} workout={w} exercisesLibrary={allExercises || []} volumeByMuscle={volumeByMuscle} highlightMuscle={highlightMuscle} onChanged={reload} onDeleted={reload} />
     ))}
     </fieldset>
-    <section className="panel"><div className="section-heading"><div><h2>Termina de elegir tus ejercicios</h2><p className="helper-text">Los cambios se guardan mientras editas. Al terminar revisaremos frecuencia, volumen y posibles repeticiones.</p></div><button className="btn-primary" disabled={finishing || tuningLocked} onClick={finishRoutine}>{finishing ? 'Guardando…' : 'Guardar y revisar rutina'}</button></div>{error && <p role="alert" className="error-text">{error}</p>}</section>
+    <section className="panel"><div className="section-heading"><div><h2>Revisa tu rutina</h2><p className="helper-text">Puedes optimizar esta rutina cada vez que la modifiques. Primero guardamos los cambios y revisamos frecuencia, volumen y posibles repeticiones; después eliges si conservarla u optimizarla.</p></div><button className="btn-primary" disabled={finishing || tuningLocked} onClick={finishRoutine}>{finishing ? 'Guardando…' : 'Guardar, revisar y optimizar'}</button></div>{error && <p role="alert" className="error-text">{error}</p>}</section>
     {reviewed && <div id="routine-review">
       <RoutineReview key={reviewedKey} warnings={analysis.warnings} onCorrect={w => { setOptimizing(false); setTuningLocked(false); focus(w); }} onOptimize={()=>{ setOptimizing(true); setTimeout(()=>document.getElementById('tuning-title')?.scrollIntoView({behavior:'smooth',block:'start'}),0); }} />
       <MuscleSummary rows={analysis.rows} selected={highlightMuscle} onSelect={setHighlightMuscle} />

@@ -9,7 +9,7 @@ import { buildWorkoutsFromTemplate } from '../utils/templateBuilder';
 export default function TemplatePicker({ onCreated }: { onCreated: () => void }) {
   const navigate = useNavigate();
   const { data: exercises } = useApi(() => api.get<Exercise[]>('/api/exercises'));
-  const { data: creator } = useApi(() => api.get<{ name: string; days: string[]; label: string } | null>('/api/routine-templates/creator'));
+  const { data: creator, loading: creatorLoading, error: creatorError } = useApi(() => api.get<{ name: string; days: string[]; label: string } | null>('/api/routine-templates/creator'));
   const [error, setError] = useState('');
   const [minutes, setMinutes] = useState<SessionLength>(60);
   const [busyKey, setBusyKey] = useState<string | null>(null);
@@ -71,6 +71,7 @@ export default function TemplatePicker({ onCreated }: { onCreated: () => void })
 
       {error && <p role="alert" className="error-text">{error}</p>}
       {creator && <div className="tuning-day"><span className="label">★ {creator.label}</span><h3>{creator.name}</h3><p>{creator.days.join(' · ')}</p><p className="helper-text">Copia independiente de la rutina del creador, con sus ejercicios y series originales. Después puedes ajustarla a tu tiempo; el selector de duración no cambia esta plantilla.</p><button className="btn-primary" disabled={busyKey !== null} onClick={useCreator}>{busyKey === 'creator' ? 'Creando…' : 'Usar PPL × UL'}</button></div>}
+      {!creator && <div className="tuning-day"><span className="label">★ Favorita del creador</span><h3>PPL × UL</h3><p className="helper-text" role="status">{creatorLoading ? 'Cargando plantilla…' : creatorError ? 'No se pudo cargar la plantilla. Vuelve a intentarlo recargando la página.' : 'La rutina del creador todavía no está publicada en este servidor.'}</p></div>}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 12 }}>
         {templates.map((tpl) => (
           <div

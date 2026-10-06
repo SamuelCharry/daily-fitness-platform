@@ -98,7 +98,7 @@ export function analysePlan(routine: Routine, allMuscles: string[]): PlanAnalysi
       const label = day.weekday == null ? day.names.join(' + ') : `${WEEKDAYS[day.weekday]} · ${day.names.join(' + ')}`;
       warnings.push({ key: `vol-${r.muscle}-${index}`, kind: 'volumen', muscle: r.muscle, workoutId: day.workoutIds[0],
         title: `${volumeMuscleName(r.muscle)}: ${day.sets} series en ${label}`,
-        detail: `${r.frequency} días/semana → baseline TNF de ${baselineLabel(r.baseline)} series directas por día. Este día queda ${low ? 'por debajo' : 'por encima'}. Es un punto de partida para series a 0–1 RIR; revisa esfuerzo, progreso y recuperación antes de ajustar.` });
+        detail: `${r.frequency} días/semana → referencia de ${baselineLabel(r.baseline)} series directas por día. Este día queda ${low ? 'por debajo' : 'por encima'}. Es un punto de partida para series a 0–1 RIR; revisa esfuerzo, progreso y recuperación antes de ajustar.` });
     }
   }
 
