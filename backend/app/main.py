@@ -70,5 +70,5 @@ if static_dir.is_dir():
             raise HTTPException(status_code=404, detail="API route not found")
         candidate = (static_dir / path).resolve()
         if candidate.is_relative_to(static_dir.resolve()) and candidate.is_file():
-            return FileResponse(candidate)
-        return FileResponse(static_dir / "index.html")
+            return FileResponse(candidate, headers={"Cache-Control": "no-store"} if candidate.suffix == ".html" else None)
+        return FileResponse(static_dir / "index.html", headers={"Cache-Control": "no-store"})

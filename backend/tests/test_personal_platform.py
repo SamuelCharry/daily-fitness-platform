@@ -42,6 +42,12 @@ class PersistenceAndAccessTests(unittest.TestCase):
         engine.dispose()
         temporary.cleanup()
 
+    def test_login_html_is_not_cached(self):
+        for path in ['/login', '/app', '/index.html']:
+            response = self.client.get(path)
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.headers.get('cache-control'), 'no-store')
+
     def test_delete_workout_with_exercises_and_session(self):
         h = self.headers
         ex = self.client.get('/api/exercises', headers=h).json()[0]

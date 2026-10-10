@@ -63,6 +63,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       logout: () => {
         clearToken();
         setUser(null);
+        // Load the current app bundle instead of retaining an older open-tab version.
+        window.location.replace(`${import.meta.env.BASE_URL}login`);
       },
     }),
     [user, loading, personalMode, registrationEnabled],
