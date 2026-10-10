@@ -172,6 +172,8 @@ EXERCISES = [
 
 def run():
     Base.metadata.create_all(bind=engine)
+    from .database import run_migrations
+    run_migrations()
     db = SessionLocal()
 
     muscle_by_name = {m.name: m for m in db.query(Muscle).all()}
