@@ -18,7 +18,7 @@ def list_exercises(
     _current_user=Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    query = db.query(Exercise).join(Muscle).join(MuscleGroup)
+    query = db.query(Exercise).join(Muscle).join(MuscleGroup).filter((Exercise.owner_id.is_(None)) | (Exercise.owner_id == _current_user.id))
 
     if muscle_group:
         query = query.filter(MuscleGroup.name == muscle_group)
@@ -54,3 +54,23 @@ def exercise_filters(_current_user=Depends(get_current_user), db: Session = Depe
     )
     planes = sorted({row[0] for row in db.query(Exercise.plane).filter(Exercise.plane.isnot(None)).all()})
     return {"muscle_groups": muscle_groups, "joint_actions": joint_actions, "planes": planes}
+
+
+from pydantic import BaseModel, Field
+from fastapi import HTTPException
+
+class CreateExerciseBody(BaseModel):
+    name: str = Field(min_length=2, max_length=100)
+    muscle: str
+    joint_action: str = Field(min_length=2, max_length=80)
+    equipment: str = Field(min_length=2, max_length=80)
+
+@router.post("")
+def create_exercise(body: CreateExerciseBody, user=Depends(get_current_user), db: Session = Depends(get_db)):
+    muscle = db.query(Muscle).filter(Muscle.name == body.muscle).first()
+    if not muscle or not body.name.strip():
+        raise HTTPException(400, "Indica un nombre y un músculo válido.")
+    exercise = Exercise(owner_id=user.id, name=body.name.strip(), muscle_id=muscle.id, joint_action=body.joint_action.strip(), equipment=body.equipment.strip())
+    db.add(exercise)
+    db.commit()
+    return {'id': exercise.id}

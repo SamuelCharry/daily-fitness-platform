@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../api';
 import { useApi } from '../hooks/useApi';
 import type { Routine, WeekPlan } from '../types';
 import TemplatePicker from '../components/TemplatePicker';
 import ThisWeek from '../components/ThisWeek';
 export default function Routines() {
+  const navigate=useNavigate();
   const { data, loading, error, reload } = useApi(() => api.get<Routine[]>('/api/routines'));
   const { data: week, setData: setWeek, error: weekError, reload: reloadWeek } = useApi(() => api.get<WeekPlan>('/api/schedule/week'));
   const [name, setName] = useState('');
@@ -20,7 +21,8 @@ export default function Routines() {
   }
   const sorted = [...(data || [])].sort((a, b) => Number(b.is_active) - Number(a.is_active));
   return <>
-    <div className="page-heading"><div><h1>Mi entrenamiento</h1><p>Tu programa, tus días y cada serie que cuenta.</p></div><Link className="btn-ghost" to="/app/history">Ver historial</Link></div>
+    <div className="page-heading"><div><h1>Mi entrenamiento</h1></div><Link className="btn-ghost" to="/app/history">Ver historial</Link></div>
+    <button className="btn-primary" disabled={busy} onClick={()=>mutate(async()=>{const result=await api.post<{workout_id:number}>('/api/sessions/improvise/start');navigate(`/app/session/${result.workout_id}`);})}>Improvisar entrenamiento</button>
     {week && <ThisWeek plan={week} onChange={setWeek} />}
     {weekError && <p role="alert" className="error-text">No se pudo cargar la semana. <button onClick={reloadWeek}>Reintentar</button></p>}
     {loading && <p role="status">Cargando programas…</p>}{error && <div className="error-banner" role="alert">{error} <button onClick={reload}>Reintentar</button></div>}{message && <p role="alert" className="error-text">{message}</p>}

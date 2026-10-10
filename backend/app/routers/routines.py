@@ -289,7 +289,7 @@ def _retire_or_delete(we: WorkoutExercise, db: Session):
 def _sync_workout_exercises(workout: Workout, exercises: List[WorkoutExerciseBody], user: User, db: Session):
     exercise_ids = [e.exercise_id for e in exercises]
     if exercise_ids:
-        found = db.query(Exercise.id).filter(Exercise.id.in_(exercise_ids)).count()
+        found = db.query(Exercise.id).filter(Exercise.id.in_(exercise_ids), (Exercise.owner_id.is_(None)) | (Exercise.owner_id == user.id)).count()
         if found != len(set(exercise_ids)):
             raise HTTPException(status_code=400, detail="One or more exercises not found")
 
@@ -351,7 +351,7 @@ def swap_exercise(
     )
     if old is None or _is_retired(old):
         raise HTTPException(status_code=404, detail="Exercise slot not found")
-    if db.query(Exercise.id).filter(Exercise.id == body.exercise_id).first() is None:
+    if db.query(Exercise.id).filter(Exercise.id == body.exercise_id, (Exercise.owner_id.is_(None)) | (Exercise.owner_id == current_user.id)).first() is None:
         raise HTTPException(status_code=400, detail="Exercise not found")
     workout_id = old.workout_id
     if body.exercise_id == old.exercise_id:

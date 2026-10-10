@@ -173,6 +173,8 @@ export interface SetLog {
 }
 
 export interface WorkoutSession {
+  plan?: WorkoutExerciseEntry[];
+  readiness?: {mood:number; energy:number; ate:boolean} | null;
   substitutions?: Record<number, Pick<Exercise, "id" | "name" | "equipment" | "muscle" | "joint_action" | "plane">>;
   id: number;
   workout_id: number;

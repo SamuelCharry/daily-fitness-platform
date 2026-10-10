@@ -6,7 +6,7 @@ const path = require('node:path');
 const { execFileSync } = require('node:child_process');
 const root = path.resolve(__dirname, '..');
 const output = mkdtempSync(path.join(tmpdir(), 'cfts-volume-test-'));
-execFileSync(process.execPath, [path.join(root,'node_modules/typescript/bin/tsc'), path.join(root,'src/utils/planAnalysis.ts'), path.join(root,'src/utils/fineTuning.ts'), '--outDir', output, '--module','commonjs','--target','es2023','--skipLibCheck'], {stdio:'inherit'});
+execFileSync(process.execPath, [path.join(root,'node_modules/typescript/bin/tsc'), path.join(root,'src/utils/planAnalysis.ts'), path.join(root,'src/utils/fineTuning.ts'), path.join(root,'src/utils/weightTools.ts'), '--outDir', output, '--module','commonjs','--target','es2023','--skipLibCheck'], {stdio:'inherit'});
 after(() => {
   const relative = path.relative(path.resolve(tmpdir()), path.resolve(output));
   assert.ok(!relative.startsWith('..') && !path.isAbsolute(relative) && path.basename(output).startsWith('cfts-volume-test-'));
@@ -124,4 +124,19 @@ test('exercise priorities reorder each day stably without crossing days',()=>{
   assert.deepEqual(p.orders[0].slot_ids,[14,15,11,12,13]);
   assert.deepEqual(p.orders[1].slot_ids,[24,25,21,22,23]);
   assert.equal(JSON.stringify(w),original);
+});
+
+const {plates,displayWeight,storedWeight}=require(path.join(output,'utils/weightTools.js'));
+test('plate calculator includes bar, balances sides and handles unreachable totals',()=>{
+ assert.deepEqual(plates(135,45,[45,25,10,5,2.5]).result,[{weight:45,count:1}]);
+ assert.equal(plates(22,20,[1.25]).actual,20);
+ assert.equal(plates(22,20,[1.25]).exact,false);
+ assert.equal(plates(10,20,[5]),null);
+ assert.deepEqual(plates(32,20,[4,3]).result,[{weight:3,count:2}]);
+ assert.equal(plates(20,20,[5]).exact,true);
+});
+test('weight unit conversion stores kilograms and round trips within display precision',()=>{
+ assert.equal(displayWeight(100,'lb'),220.46);
+ assert.ok(Math.abs(storedWeight(220.46,'lb')-100)<.01);
+ assert.equal(storedWeight(40,'kg'),40);
 });

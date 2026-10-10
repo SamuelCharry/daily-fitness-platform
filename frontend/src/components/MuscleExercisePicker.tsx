@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import SessionExercisePicker from './SessionExercisePicker';
 import { api } from '../api';
 import { useApi } from '../hooks/useApi';
 import type { Exercise } from '../types';
@@ -10,6 +11,7 @@ export default function MuscleExercisePicker({ onPick }: { onPick: (ex: Exercise
   const { data: exercises, loading } = useApi(() => api.get<Exercise[]>('/api/exercises'));
   const [group, setGroup] = useState(GROUP_ORDER[0]);
   const [muscle, setMuscle] = useState<string | null>(null);
+  const [creating,setCreating]=useState(false);
   const [search, setSearch] = useState('');
 
   // Rear delts remain anatomically in Shoulder, but are also discoverable in Back.
@@ -45,6 +47,8 @@ export default function MuscleExercisePicker({ onPick }: { onPick: (ex: Exercise
         padding: 14,
       }}
     >
+      <button onClick={()=>setCreating(true)}>Crear ejercicio</button>
+      {creating && <SessionExercisePicker createInitially onClose={()=>setCreating(false)} onPick={async id=>{const all=await api.get<Exercise[]>('/api/exercises');const ex=all.find(e=>e.id===id);if(ex){onPick(ex);setCreating(false);}}}/>}
       <input
         type="text"
         placeholder="Search any exercise by name…"

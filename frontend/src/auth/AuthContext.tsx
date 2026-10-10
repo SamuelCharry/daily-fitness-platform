@@ -13,6 +13,7 @@ interface AuthContextValue {
   registrationEnabled: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string) => Promise<void>;
+  googleLogin: (credential: string) => Promise<void>;
   logout: () => void;
 }
 
@@ -53,6 +54,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setToken(access_token);
         const me = await api.get<Me>('/api/auth/me');
         setUser(me);
+      },
+      googleLogin: async (credential) => {
+        const { access_token } = await api.post<{access_token: string}>('/api/auth/google', {credential});
+        setToken(access_token);
+        setUser(await api.get<Me>('/api/auth/me'));
       },
       logout: () => {
         clearToken();

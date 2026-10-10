@@ -9,6 +9,7 @@ services:
       # OWNER_PASSWORD: ${OWNER_PASSWORD:?Set OWNER_PASSWORD in .env}
       JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env}
       REGISTRATION_ENABLED: ${REGISTRATION_ENABLED:-true}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
       PORT: 8081
       DATABASE_URL: sqlite:////data/fitness.db
       TZ: America/Bogota

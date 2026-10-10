@@ -7,7 +7,7 @@ const navigation = [
   ['/app/checkin', 'Check-in diario', 'table'],
   ['/app/routines', 'Entrenamientos', 'training'],
   ['/app/history', 'Historial', 'history'],
-  ['/app/notes', 'Mis notas', 'book'],
+  ['/app/notes', 'Infórmate', 'book'],
 ] as const;
 
 export function Icon({ name }: { name: string }) {
@@ -38,7 +38,7 @@ export default function Layout() {
         </div>
       </aside>
       <div className="workspace">
-        <header className="workspace-header"><Link className="notes-header-link" to="/app/notes"><Icon name="book" /><span>Mis notas</span></Link><div><button className="quiet-button" onClick={() => setMode(mode === 'dark' ? 'light' : 'dark')} aria-label="Cambiar entre tema claro y oscuro"><Icon name="sun" /></button>{!personalMode && <button className="quiet-button" onClick={logout}>Salir</button>}<Link className="user-avatar" to="/app/settings" aria-label="Abrir mi espacio y preferencias">Yo</Link></div></header>
+        <header className="workspace-header"><Link className="notes-header-link" to="/app/notes"><Icon name="book" /><span>Infórmate</span></Link><div><button className="quiet-button" onClick={() => setMode(mode === 'dark' ? 'light' : 'dark')} aria-label="Cambiar entre tema claro y oscuro"><Icon name="sun" /></button>{!personalMode && <button className="quiet-button" onClick={logout}>Salir</button>}<Link className="user-avatar" to="/app/settings" aria-label="Abrir mi espacio y preferencias">Yo</Link></div></header>
         <main className="workspace-main"><Outlet /></main>
       </div>
     </div>

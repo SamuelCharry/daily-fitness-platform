@@ -42,6 +42,101 @@ class PersistenceAndAccessTests(unittest.TestCase):
         engine.dispose()
         temporary.cleanup()
 
+    def test_google_identity_and_rejections(self):
+        from app.routers.auth import attempts
+        attempts.clear()
+        claims = {'sub':'google-test-123', 'email':'google-qa@gmail.com', 'email_verified':True}
+        with patch.dict(os.environ, {'GOOGLE_CLIENT_ID':'test-client'}), patch('app.routers.auth.verify_google', return_value=claims) as verify:
+            first = self.client.post('/api/auth/google', json={'credential':'valid'})
+            self.assertEqual(first.status_code, 200)
+            verify.assert_called_with('valid', 'test-client')
+            headers = {'Authorization':'Bearer '+first.json()['access_token']}
+            original = self.client.get('/api/auth/me', headers=headers).json()['id']
+            claims['email'] = 'changed@gmail.com'
+            second = self.client.post('/api/auth/google', json={'credential':'valid'})
+            self.assertEqual(self.client.get('/api/auth/me', headers={'Authorization':'Bearer '+second.json()['access_token']}).json()['id'], original)
+            claims['email_verified'] = False
+            self.assertEqual(self.client.post('/api/auth/google', json={'credential':'bad'}).status_code,401)
+            verify.side_effect = ValueError('Invalid audience or signature')
+            self.assertEqual(self.client.post('/api/auth/google', json={'credential':'invalid'}).status_code,401)
+            self.assertEqual(self.client.post('/api/auth/login', data={'username':'test@example.com','password':'test-only-password-123'}).status_code,403)
+        with patch.dict(os.environ, {'GOOGLE_CLIENT_ID':''}):
+            self.assertEqual(self.client.post('/api/auth/google', json={'credential':'valid'}).status_code,503)
+
+    def test_session_changes_readiness_and_default(self):
+        h = self.headers
+        ex = self.client.get('/api/exercises', headers=h).json()[0]
+        custom = self.client.post('/api/exercises', headers=h, json={'name':'Custom QA movement', 'muscle':ex['muscle'], 'joint_action':'Horizontal Pull', 'equipment':'Cable'})
+        self.assertEqual(custom.status_code, 200)
+        with SessionLocal() as db:
+            outsider = User(email='exercise-outsider@example.com', password_hash=hash_password('test-password-123'))
+            db.add(outsider); db.commit(); db.refresh(outsider)
+            outsider_headers = {'Authorization': 'Bearer '+create_access_token(outsider.id)}
+        visible = self.client.get('/api/exercises', headers=outsider_headers).json()
+        self.assertNotIn(custom.json()['id'], [e['id'] for e in visible])
+
+        w = self.client.post('/api/sessions/improvise/start', headers=h).json()['workout_id']
+        session = self.client.post('/api/sessions', headers=h, json={'workout_id':w}).json()
+        url = f"/api/sessions/{session['id']}"
+        self.assertEqual(self.client.put(url+'/readiness', headers=h, json={'mood':3,'energy':1,'ate':False}).status_code,200)
+        added = self.client.post(url+'/exercises', headers=h, json={'exercise_id':custom.json()['id']}).json()
+        slot = added['plan'][0]['id']
+        for n in [1,2,3]:
+            result = self.client.post(url+'/sets', headers=h, json={'workout_exercise_id':slot,'set_number':n,'weight':n*10,'reps':8})
+            self.assertEqual(result.status_code,200)
+        middle = next(x for x in result.json()['sets'] if x['set_number']==2)
+        removed = self.client.delete(url+f"/sets/{middle['id']}", headers=h).json()
+        self.assertEqual(removed['plan'][0]['target_sets'],2)
+        self.assertEqual(sorted((s['set_number'],s['weight']) for s in removed['sets']),[(1,10),(2,30)])
+        resumed = self.client.post('/api/sessions', headers=h, json={'workout_id':w}).json()
+        self.assertEqual(resumed['readiness'],{'mood':3,'energy':1,'ate':False})
+        self.assertEqual(len(resumed['plan']),1)
+        self.assertEqual(self.client.post(url+'/finish', headers=h, json={'save_default':True}).status_code,200)
+        routines = self.client.get('/api/routines', headers=h).json()
+        saved = next(day for r in routines for day in r['workouts'] if day['id']==w)
+        self.assertEqual(saved['exercises'][0]['target_sets'],2)
+        self.assertEqual(saved['exercises'][0]['exercise_id'],custom.json()['id'])
+        self.assertEqual(self.client.delete(url+f"/sets/{removed['sets'][0]['id']}",headers=h).status_code,409)
+        self.assertEqual(self.client.put(url+'/readiness',headers=h,json={'mood':2,'energy':2,'ate':True}).status_code,409)
+
+    def test_session_temporary_plan_does_not_change_routine(self):
+        h=self.headers
+        ex=self.client.get('/api/exercises',headers=h).json()[0]
+        r=self.client.post('/api/routines',headers=h,json={'name':'Temporary QA'}).json()
+        w=self.client.post(f"/api/routines/{r['id']}/workouts",headers=h,json={'name':'Day','exercises':[{'exercise_id':ex['id'],'target_sets':3}]}).json()
+        session=self.client.post('/api/sessions',headers=h,json={'workout_id':w['id']}).json()
+        url=f"/api/sessions/{session['id']}"
+        slot=w['exercises'][0]['id']
+        self.assertEqual(self.client.put(url+f'/exercises/{slot}/series',headers=h,json={'target_sets':1}).status_code,200)
+        self.client.post(url+'/sets',headers=h,json={'workout_exercise_id':slot,'set_number':1,'weight':25,'reps':10})
+        self.assertEqual(self.client.post(url+'/finish',headers=h,json={'save_default':False}).status_code,200)
+        new=self.client.post('/api/sessions',headers=h,json={'workout_id':w['id']}).json()
+        self.assertEqual(new['plan'][0]['target_sets'],3)
+        self.assertIsNone(new['readiness'])
+
+    def test_remove_any_planned_series_and_all_series(self):
+        h=self.headers
+        ex=self.client.get('/api/exercises',headers=h).json()[0]
+        w=self.client.post('/api/sessions/improvise/start',headers=h).json()['workout_id']
+        session=self.client.post('/api/sessions',headers=h,json={'workout_id':w}).json()
+        url=f"/api/sessions/{session['id']}"
+        added=self.client.post(url+'/exercises',headers=h,json={'exercise_id':ex['id']}).json()
+        slot=added['plan'][0]['id']
+        self.client.post(url+'/sets',headers=h,json={'workout_exercise_id':slot,'set_number':3,'weight':40,'reps':8})
+        # Remove a pending first row, preserving and shifting the logged third row.
+        removed=self.client.delete(url+f'/exercises/{slot}/series/1',headers=h).json()
+        self.assertEqual(removed['plan'][0]['target_sets'],2)
+        self.assertEqual(removed['sets'][0]['set_number'],2)
+        self.assertEqual(removed['sets'][0]['weight'],40)
+        for number in [2,1]:
+            response=self.client.delete(url+f'/exercises/{slot}/series/{number}',headers=h)
+            self.assertEqual(response.status_code,200)
+        self.assertEqual(response.json()['plan'][0]['target_sets'],0)
+        self.assertEqual(response.json()['sets'],[])
+        self.assertEqual(self.client.delete(url+f'/exercises/{slot}/series/1',headers=h).status_code,404)
+        resumed=self.client.post('/api/sessions',headers=h,json={'workout_id':w}).json()
+        self.assertEqual(resumed['plan'][0]['target_sets'],0)
+
     def test_access_and_registration(self):
         self.assertEqual(self.client.get('/api/body-stats').status_code, 401)
         self.assertEqual(self.client.get('/api/body-stats', headers={'Authorization': 'Bearer broken'}).status_code, 401)

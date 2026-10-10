@@ -64,6 +64,7 @@ class MovementPattern(Base):
 
 class Exercise(Base):
     __tablename__ = "exercises"
+    owner_id = Column(Integer, ForeignKey("users.id"))
     id = Column(Integer, primary_key=True)
     name = Column(String, nullable=False)
     equipment = Column(String)  # Barbell, Cable, Dumbbell, Machine, Bodyweight...
@@ -147,6 +148,9 @@ class WorkoutSession(Base):
     date = Column(Date, nullable=False)
     started_at = Column(DateTime(timezone=True))  # None on sessions created before it existed
     finished_at = Column(DateTime(timezone=True))
+    readiness = Column(String)
+    session_plan = Column(String)
+    original_plan = Column(String)
     substitutions = Column(String)  # Session-only slot -> exercise ID mapping.
 
     workout = relationship("Workout")
@@ -205,3 +209,9 @@ class ScheduleMove(Base):
     workout_id = Column(Integer, ForeignKey("workouts.id"), nullable=False)
     week_start = Column(Date, nullable=False)
     date = Column(Date, nullable=False)
+
+
+class GoogleIdentity(Base):
+    __tablename__ = "google_identities"
+    subject = Column(String, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, unique=True)

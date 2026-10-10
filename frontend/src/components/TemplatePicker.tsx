@@ -45,7 +45,7 @@ export default function TemplatePicker({ onCreated }: { onCreated: () => void })
   return (
     <div className="card">
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
-        <span className="label">Empezar desde una plantilla</span>
+        <span className="label">Plantillas</span>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <span style={{ font: "400 11px/1 'Inter', sans-serif", color: 'var(--text-dim)' }}>Tiempo orientativo</span>
           <div style={{ display: 'flex', gap: 4, background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8, padding: 3 }}>
@@ -70,9 +70,9 @@ export default function TemplatePicker({ onCreated }: { onCreated: () => void })
       </div>
 
       {error && <p role="alert" className="error-text">{error}</p>}
-      {creator && <div className="tuning-day"><span className="label">★ {creator.label}</span><h3>{creator.name}</h3><p>{creator.days.join(' · ')}</p><p className="helper-text">Copia independiente de la rutina del creador, con sus ejercicios y series originales. Después puedes ajustarla a tu tiempo; el selector de duración no cambia esta plantilla.</p><button className="btn-primary" disabled={busyKey !== null} onClick={useCreator}>{busyKey === 'creator' ? 'Creando…' : 'Usar PPL × UL'}</button></div>}
-      {!creator && <div className="tuning-day"><span className="label">★ Favorita del creador</span><h3>PPL × UL</h3><p className="helper-text" role="status">{creatorLoading ? 'Cargando plantilla…' : creatorError ? 'No se pudo cargar la plantilla. Vuelve a intentarlo recargando la página.' : 'La rutina del creador todavía no está publicada en este servidor.'}</p></div>}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 12 }}>
+      {creator && <div className="tuning-day"><span className="label">★ {creator.label}</span><h3>{creator.name}</h3><p>{creator.days.join(' · ')}</p><p className="helper-text">5 días · Ejercicios y series del creador.</p><button className="btn-primary" disabled={busyKey !== null} onClick={useCreator}>{busyKey === 'creator' ? 'Creando…' : 'Usar PPL × UL'}</button></div>}
+      {!creator && <div className="tuning-day"><span className="label">★ Favorita del creador</span><h3>PPL × UL</h3><p className="helper-text" role="status">{creatorLoading ? 'Cargando plantilla…' : creatorError ? 'No se pudo cargar la plantilla. Vuelve a intentarlo recargando la página.' : 'La rutina del creador todavía no está publicada en este servidor.'}</p></div>}
         {templates.map((tpl) => (
           <div
             key={tpl.key}

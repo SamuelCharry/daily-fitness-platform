@@ -18,136 +18,244 @@ const niddk = { title: 'NIDDK · Alimentación, actividad física y hábitos sal
 // Public editorial reading notes. Never put private measurements or diary entries here.
 export const readingNotes: ReadingNote[] = [
   {
-    slug: 'progresar-sin-cambiar-la-tecnica', title: 'Progresar sin cambiar las reglas', topic: 'Entrenamiento',
-    summary: 'Más peso o más repeticiones sirven para comparar si el movimiento sigue siendo el mismo.',
+    slug: 'progresar-sin-cambiar-la-tecnica', title: 'Sobrecarga progresiva', topic: 'Entrenamiento',
+    summary: "Cómo comparar peso, repeticiones y técnica entre sesiones.",
     tags: ['sobrecarga progresiva', 'técnica', 'repeticiones'],
     sections: [
-      { title: 'La idea', text: 'La progresión se entiende mejor cuando mantienes una técnica comparable. Mover más carga con menos recorrido o con más impulso cambia la tarea; no demuestra por sí solo que hayas mejorado en el ejercicio original.' },
-      { title: 'Un ejemplo sencillo', text: 'Hacer 9 repeticiones donde antes hacías 8, con la misma carga y el mismo recorrido, ofrece una comparación útil. Repetir la marca con menor esfuerzo también puede indicar una mejora, aunque el número no cambie.' },
-      { title: 'Qué mirar en tu registro', text: 'Compara carga, repeticiones y RIR junto con la técnica. Una sesión aislada no resume todo un proceso: mira varias exposiciones al mismo ejercicio antes de interpretar la tendencia.' },
-    ],
-    takeaway: 'Antes de subir el peso, define qué repetición vas a considerar válida.', sources: [training('3')],
+      {
+            "title": "Definición",
+            "text": "Sobrecarga progresiva: aumentar la exigencia del entrenamiento a lo largo del tiempo. Puedes registrar cambios en carga o repeticiones."
+      },
+      {
+            "title": "Ejemplo",
+            "text": "Sesión anterior: 60 kg × 8 repeticiones a 2 RIR. Sesión actual: 60 kg × 9 a 2 RIR, con el mismo recorrido. Has hecho una repetición más en condiciones comparables."
+      },
+      {
+            "title": "Registro",
+            "text": "Anota peso, repeticiones y RIR. Si cambias el recorrido, el equipo o la técnica, deja una observación antes de comparar las marcas."
+      }
+],
+    takeaway: "Compara el mismo ejercicio con el mismo recorrido y un esfuerzo similar.", sources: [training('3')],
   },
   {
-    slug: 'rir-en-palabras-simples', title: 'RIR: cuánto quedaba en la serie', topic: 'Entrenamiento',
-    summary: 'Una forma sencilla de describir el esfuerzo sin depender solo de los kilos.',
+    slug: 'rir-en-palabras-simples', title: 'Repeticiones en reserva (RIR)', topic: 'Entrenamiento',
+    summary: "Qué significan 0, 1 y 2 RIR al registrar una serie.",
     tags: ['RIR', 'fallo', 'intensidad'],
     sections: [
-      { title: 'Qué significa', text: 'RIR son las repeticiones que estimas que podrías completar antes de no poder terminar otra con la técnica prevista. Si crees que quedaban dos, anotas 2 RIR. Es una estimación, no una medición exacta.' },
-      { title: 'Por qué ayuda', text: 'Dos series con el mismo peso y repeticiones pueden requerir esfuerzos distintos. Registrar el margen que quedaba aporta contexto para comparar sesiones y entender la fatiga.' },
-      { title: 'Un matiz importante', text: 'El manual usa una convención propia alrededor de 0 y 1 RIR. Para tu registro, elige una definición y úsala de forma consistente. La orientación general de ACSM no exige llegar al fallo en todas las series para obtener resultados.' },
-    ],
-    takeaway: 'Describe el margen que quedaba con honestidad; no es una puntuación que tengas que ganar.', sources: [training('4, 6'), acsm],
+      {
+            "title": "Definición",
+            "text": "RIR significa repeticiones en reserva. Es tu estimación de cuántas repeticiones adicionales podrías completar con la técnica prevista."
+      },
+      {
+            "title": "Escala",
+            "text": "0 RIR: no podrías completar otra repetición. 1 RIR: estimas que podrías hacer una más. 2 RIR: estimas que podrías hacer dos más."
+      },
+      {
+            "title": "Ejemplo",
+            "text": "Terminas 10 repeticiones y calculas que podrías haber llegado a 12: registra 10 reps y 2 RIR. No registres 12 reps; las dos restantes no se hicieron."
+      }
+],
+    takeaway: "El RIR describe el margen al terminar la serie.", sources: [training('4, 6'), acsm],
   },
   {
-    slug: 'volumen-y-recuperacion', title: 'Volumen: contar series con contexto', topic: 'Entrenamiento',
-    summary: 'El número de series dice más cuando sabes qué esfuerzo y qué músculo representan.',
+    slug: 'volumen-y-recuperacion', title: 'Volumen de entrenamiento', topic: 'Entrenamiento',
+    summary: "Series de trabajo por músculo, por día y por semana.",
     tags: ['volumen', 'series', 'recuperación'],
     sections: [
-      { title: 'Qué cuenta el manual', text: 'TNF distingue las series de trabajo de las de calentamiento y usa el número de series como medida práctica del volumen. Esto es diferente del total de kilos movidos, que combina carga y repeticiones.' },
-      { title: 'Por qué no basta una cifra', text: 'Importan el esfuerzo, la distribución semanal y si un músculo participa directamente o como apoyo. No todas las series aportan exactamente el mismo estímulo ni cuestan la misma recuperación.' },
-      { title: 'Cómo leer tu propia semana', text: 'Anota las series de trabajo, observa el rendimiento de las sesiones siguientes y evita sumar trabajo únicamente para alcanzar una cifra. Los rangos concretos del autor pertenecen a su enfoque; no son una dosis universal.' },
-    ],
-    takeaway: 'Una serie adicional tiene sentido si aporta algo y puedes recuperarte de ella.', sources: [training('6, 18–19')],
+      {
+            "title": "Qué se cuenta",
+            "text": "En esta plataforma, el volumen se expresa en series de trabajo. Las aproximaciones de calentamiento se registran aparte y no se suman a ese total."
+      },
+      {
+            "title": "Ejemplo",
+            "text": "El martes haces 3 series de press y 3 de aperturas para pecho: 6 series ese día. Si repites ese trabajo el sábado, son 12 series semanales con frecuencia 2."
+      },
+      {
+            "title": "Cómo cuenta la app",
+            "text": "El resumen agrupa las series por el músculo principal asignado a cada ejercicio. Suma las regiones del pecho y no añade automáticamente series por la participación secundaria de otros músculos."
+      }
+],
+    takeaway: "Distingue las series de una sesión del total semanal.", sources: [training('6, 18–19')],
   },
   {
-    slug: 'ejercicios-que-puedes-repetir', title: 'Elegir ejercicios que puedas repetir bien', topic: 'Entrenamiento',
-    summary: 'Comodidad, control y un movimiento comparable ayudan a interpretar el progreso.',
+    slug: 'ejercicios-que-puedes-repetir', title: 'Selección de ejercicios', topic: 'Entrenamiento',
+    summary: "Músculo principal, equipo, estabilidad y recorrido.",
     tags: ['estabilidad', 'máquinas', 'recorrido', 'ROM'],
     sections: [
-      { title: 'La estabilidad como herramienta', text: 'El manual destaca la estabilidad al elegir ejercicios para hipertrofia. Un apoyo puede facilitar que el equilibrio no sea lo que limite la serie. Eso no convierte automáticamente un ejercicio en la mejor opción para todas las personas.' },
-      { title: 'Recorrido y control', text: 'Define un recorrido que puedas repetir con control y que se adapte al movimiento. Acortarlo para mover más peso dificulta comparar registros. No hace falta copiar a otra persona si su equipo o sus proporciones son diferentes.' },
-      { title: 'La elección práctica', text: 'Valora el objetivo del ejercicio, el equipo disponible y cómo lo ejecutas. Máquinas y pesos libres pueden ser útiles; la elección debe permitir entrenar de forma consistente.' },
-    ],
-    takeaway: 'Busca un ejercicio que puedas ejecutar y registrar de forma repetible.', sources: [training('4, 7–8'), acsm],
+      {
+            "title": "Músculo y movimiento",
+            "text": "Identifica el músculo principal y el movimiento del ejercicio. La biblioteca permite filtrar por músculo y patrón."
+      },
+      {
+            "title": "Ejecución",
+            "text": "Elige una posición y un recorrido que puedas repetir. Anota ajustes del asiento, agarre o altura de la polea si cambian entre sesiones."
+      },
+      {
+            "title": "Sustituciones",
+            "text": "Si el equipo está ocupado, busca una alternativa para el mismo músculo. Ajusta la carga: 40 kg en una máquina no equivalen necesariamente a 40 kg en otra."
+      }
+],
+    takeaway: "Registra la carga del ejercicio que realmente hiciste.", sources: [training('4, 7–8'), acsm],
   },
   {
-    slug: 'menos-ejercicios-repetidos', title: 'Que cada ejercicio tenga una función', topic: 'Entrenamiento',
-    summary: 'Variar el equipo no siempre cambia lo que estás entrenando.',
+    slug: 'menos-ejercicios-repetidos', title: 'Redundancia de ejercicios', topic: 'Entrenamiento',
+    summary: "Cómo revisar dos ejercicios que trabajan el mismo músculo.",
     tags: ['redundancia', 'selección de ejercicios', 'rutina'],
     sections: [
-      { title: 'Qué es la redundancia', text: 'Dos ejercicios pueden parecer diferentes y exigir un patrón muy parecido. TNF propone revisar qué aporta cada uno, en lugar de asumir que una rutina es mejor solo porque contiene más variantes.' },
-      { title: 'Parecidos no significa inútiles', text: 'Trabajar el mismo músculo de varias maneras puede tener sentido si cambia el papel del ejercicio, el recorrido o la forma de cargarlo. La pregunta es qué añade esa variante al conjunto.' },
-      { title: 'Cambios con intención', text: 'Mantener algunas referencias durante un tiempo facilita ver el progreso. Cambiar un ejercicio porque no encaja es distinto de cambiar todo cada semana sin una razón clara.' },
-    ],
-    takeaway: 'Pregúntate: ¿qué aporta este ejercicio que no estaba cubierto?', sources: [training('5, 62')],
+      {
+            "title": "Qué comparar",
+            "text": "Compara movimiento, posición de las articulaciones, recorrido y forma de aplicar la carga. Compartir músculo principal no basta para llamar redundantes a dos ejercicios."
+      },
+      {
+            "title": "Ejemplo",
+            "text": "Una extensión de tríceps por encima de la cabeza y un press JM tienen posiciones y ejecuciones diferentes. La etiqueta «tríceps» no demuestra que sean intercambiables."
+      },
+      {
+            "title": "En la plataforma",
+            "text": "La revisión automática señala un mismo ejercicio añadido dos veces. Revisa si es intencional antes de quitarlo; la alerta no demuestra que una variante sea inútil."
+      }
+],
+    takeaway: "Mismo músculo no significa mismo ejercicio.", sources: [training('5, 62')],
   },
   {
-    slug: 'distribuir-la-semana', title: 'Organizar la semana y el orden de los ejercicios', topic: 'Entrenamiento',
-    summary: 'La frecuencia y el orden ayudan a distribuir el trabajo, el tiempo y la fatiga.',
+    slug: 'distribuir-la-semana', title: 'Frecuencia y orden de ejercicios', topic: 'Entrenamiento',
+    summary: "Frecuencia semanal y posición de los ejercicios prioritarios.",
     tags: ['frecuencia', 'agenda', 'fatiga', 'prioridades'],
     sections: [
-      { title: 'Frecuencia y volumen van juntos', text: 'La frecuencia describe cuántas veces entrenas un músculo; el volumen, cuánto trabajo haces. Cambiar los días sin mirar las series y su esfuerzo deja fuera parte de la decisión.' },
-      { title: 'Qué hacer primero', text: 'La fatiga puede afectar al rendimiento conforme avanza la sesión. El manual relaciona el orden con las prioridades: si una tarea es importante, conviene pensar dónde encaja en lugar de dejarla siempre para el final.' },
-      { title: 'Que el plan quepa en tu vida', text: 'La discusión sobre frecuencia tiene matices y no produce una única división semanal para todos. Una agenda que puedes cumplir, con trabajo distribuido y recuperación suficiente, es más útil que una planificación ideal que abandonas.' },
-    ],
-    takeaway: 'Diseña la semana alrededor de tu disponibilidad real y revisa cómo rindes.', sources: [training('10–12, 16–18'), acsm],
+      {
+            "title": "Frecuencia",
+            "text": "Es el número de días por semana en que entrenas un músculo. Pecho el martes y el sábado equivale a frecuencia 2. Dos ejercicios de pecho el martes siguen contando como un día."
+      },
+      {
+            "title": "Orden",
+            "text": "Si quieres priorizar un músculo, coloca sus ejercicios al principio de la sesión. El optimizador ordena primero la prioridad alta, después la media y finalmente el resto."
+      },
+      {
+            "title": "Tiempo",
+            "text": "Con la estimación de la app —1 minuto de ejecución y 3 de descanso por serie—, 20 series ocupan 80 minutos. El calentamiento y los cambios de equipo requieren tiempo adicional."
+      }
+],
+    takeaway: "Cuenta días distintos para la frecuencia y minutos para la duración.", sources: [training('10–12, 16–18'), acsm],
   },
   {
-    slug: 'empezar-con-una-base', title: 'Al empezar, construir una base', topic: 'Hábitos',
-    summary: 'Aprender, repetir y registrar antes de perseguir todos los detalles.',
+    slug: 'empezar-con-una-base', title: 'Entrenamiento para principiantes', topic: 'Hábitos',
+    summary: "Qué registrar cuando empiezas a entrenar.",
     tags: ['principiantes', 'constancia', 'técnica'],
     sections: [
-      { title: 'Menos decisiones al principio', text: 'En el manual, la etapa inicial prioriza desarrollar una base antes de especializar cada parte del físico. No necesitas decidir desde el primer día cuáles serán tus puntos débiles a largo plazo.' },
-      { title: 'Una práctica que puedes sostener', text: 'Aprender los movimientos, repetirlos y llevar un registro sencillo facilita reconocer mejoras. Los detalles de una rutina avanzada pueden esperar si todavía estás aprendiendo a entrenar con regularidad.' },
-      { title: 'Tu primera referencia', text: 'El registro puede ser tan simple como ejercicio, carga, repeticiones y esfuerzo. Revisa qué pudiste hacer con una técnica comparable, sin usar el rendimiento de otra persona como requisito de entrada.' },
-    ],
-    takeaway: 'Una rutina comprensible y constante es un buen punto de partida.', sources: [training('13, 20–22'), acsm],
+      {
+            "title": "Preparar la sesión",
+            "text": "Elige los días disponibles y una rutina. Antes de empezar, revisa los ejercicios, las series previstas y el equipo que necesitas."
+      },
+      {
+            "title": "Registrar una serie",
+            "text": "Guarda el ejercicio, el peso, las repeticiones completadas y el RIR estimado. Mantén la misma unidad de peso al comparar registros."
+      },
+      {
+            "title": "Revisar la siguiente sesión",
+            "text": "Consulta la columna «Anterior». Comprueba si repetiste la carga y el recorrido antes de interpretar un cambio en repeticiones."
+      }
+],
+    takeaway: "Registro mínimo: ejercicio, peso, repeticiones y RIR.", sources: [training('13, 20–22'), acsm],
   },
   {
-    slug: 'peso-diario-y-tendencia', title: 'El peso de hoy no cuenta toda la historia', topic: 'Alimentación',
-    summary: 'Condiciones parecidas y varios registros ayudan a distinguir tendencia de ruido.',
+    slug: 'peso-diario-y-tendencia', title: 'Peso corporal y tendencia', topic: 'Alimentación',
+    summary: "Cómo registrar el peso y calcular un promedio.",
     tags: ['peso', 'promedio', 'agua', 'seguimiento'],
     sections: [
-      { title: 'Hacer comparables los registros', text: 'El manual propone pesarse en condiciones parecidas y guardar la fecha. La idea es reducir diferencias de horario, ropa y comidas, en lugar de tratar cada lectura como una medida exacta de grasa corporal.' },
-      { title: 'Mirar más de un día', text: 'El peso puede cambiar por agua y contenido digestivo. TNF destaca que una bajada inicial no equivale necesariamente a la misma cantidad de grasa perdida. Compara tendencias antes de concluir que un plan funciona o dejó de funcionar.' },
-      { title: 'Cómo ayuda la bitácora', text: 'Un promedio de varios días resume mejor el conjunto que elegir el valor más alto o el más bajo. Usa el peso junto con el contexto del registro y el rendimiento; el promedio tampoco identifica por sí solo cuánto músculo o grasa cambió.' },
-    ],
-    takeaway: 'No hagas una gran corrección a partir de una sola lectura de la báscula.', sources: [nutrition('19–22')],
+      {
+            "title": "Condiciones de medida",
+            "text": "Usa la misma báscula y procura repetir el horario y las condiciones de ropa y comida. Guarda la fecha junto al peso."
+      },
+      {
+            "title": "Promedio",
+            "text": "Suma los pesos registrados y divide entre el número de mediciones. Por ejemplo: 75,0 + 75,4 + 74,9 = 225,3 kg; dividido entre 3 da 75,1 kg."
+      },
+      {
+            "title": "Interpretación",
+            "text": "El peso incluye agua y contenido digestivo, además de los tejidos corporales. Una diferencia entre dos días no permite calcular cuánta grasa o músculo cambió."
+      }
+],
+    takeaway: "Compara promedios de periodos equivalentes, no solo dos pesajes.", sources: [nutrition('19–22')],
   },
   {
-    slug: 'calorias-y-macros', title: 'Calorías y macros, sin complicarlo', topic: 'Alimentación',
-    summary: 'La energía total y la composición de la comida responden preguntas diferentes.',
+    slug: 'calorias-y-macros', title: 'Calorías y macronutrientes', topic: 'Alimentación',
+    summary: "Kilocalorías y gramos de proteína, carbohidratos y grasa.",
     tags: ['calorías', 'proteína', 'carbohidratos', 'grasas'],
     sections: [
-      { title: 'Una distinción útil', text: 'Las calorías describen energía. Los macronutrientes describen componentes de los alimentos: proteína, carbohidratos y grasa. Dos menús con energía similar pueden diferir en nutrientes y en lo fácil que resulta sostenerlos.' },
-      { title: 'Un registro aproximado', text: 'Como referencia de lectura, proteína y carbohidratos aportan aproximadamente 4 kcal por gramo, y la grasa 9. Las etiquetas y los registros no son mediciones perfectas; usa estos números para entenderlos, no para exigir precisión absoluta.' },
-      { title: 'Objetivos personales', text: 'El manual propone sus propios métodos para fijar macros. Aquí no se convierten sus tablas en una receta universal: las necesidades dependen de la persona y del contexto. El total energético no reemplaza la variedad y la calidad de la alimentación.' },
-    ],
-    takeaway: 'Usa calorías y macros como información, no como la única medida de una buena alimentación.', sources: [nutrition('6, 23–27'), niddk],
+      {
+            "title": "Unidades",
+            "text": "Las kilocalorías (kcal) expresan energía. Los macronutrientes se registran en gramos: proteína, carbohidratos y grasa."
+      },
+      {
+            "title": "Cálculo aproximado",
+            "text": "Proteína: 4 kcal/g. Carbohidratos: 4 kcal/g. Grasa: 9 kcal/g. Una comida con 30 g de proteína, 50 g de carbohidratos y 10 g de grasa suma aproximadamente 410 kcal."
+      },
+      {
+            "title": "Registro",
+            "text": "Comprueba si la etiqueta informa por 100 g o por porción. Una porción de 150 g de un alimento con 200 kcal por 100 g aporta 300 kcal. Las etiquetas pueden incluir redondeos."
+      }
+],
+    takeaway: "Ajusta los valores de la etiqueta a la cantidad que comiste.", sources: [nutrition('6, 23–27'), niddk],
   },
   {
-    slug: 'alimentacion-que-encaje', title: 'Un plan que encaje con tu día', topic: 'Hábitos',
-    summary: 'Presupuesto, horarios y preferencias también forman parte del plan.',
+    slug: 'alimentacion-que-encaje', title: 'Planificación de comidas', topic: 'Hábitos',
+    summary: "Lista de compras, porciones y alternativas para días ocupados.",
     tags: ['adherencia', 'comidas', 'flexibilidad', 'presupuesto'],
     sections: [
-      { title: 'Partir de lo que tienes', text: 'La guía pide considerar el tiempo para cocinar, el presupuesto, los gustos y la vida social. Un plan que depende de condiciones que nunca tienes puede ser difícil de sostener, aunque sobre el papel parezca perfecto.' },
-      { title: 'Simplificar decisiones', text: 'Tener algunas comidas habituales y opciones para días ocupados puede facilitar la constancia. Puedes incluir alimentos variados y adaptar la estructura a tus preferencias; no necesitas reproducir los menús del manual.' },
-      { title: 'Flexibilidad con continuidad', text: 'Una comida diferente no elimina todo el proceso. Vuelve a las prácticas que puedes mantener, observa qué te resultó difícil y ajusta la organización en vez de convertir cada imprevisto en un fracaso.' },
-    ],
-    takeaway: 'Planea también el día ocupado, no solo el día ideal.', sources: [nutrition('8, 10, 23, 28, 34'), niddk],
+      {
+            "title": "Organizar",
+            "text": "Anota cuántas comidas prepararás, qué ingredientes necesitas y qué cantidades comprarás."
+      },
+      {
+            "title": "Ejemplo de preparación",
+            "text": "Si cocinas cuatro porciones juntas, registra los ingredientes de la receta completa. Divide entre cuatro solo si las porciones son equivalentes."
+      },
+      {
+            "title": "Alternativas",
+            "text": "Deja anotada una comida alternativa para los días en que no puedas cocinar. Registra la opción que consumiste y su cantidad, aunque sea diferente de la prevista."
+      }
+],
+    takeaway: "Calcula la receta completa antes de repartirla en porciones.", sources: [nutrition('8, 10, 23, 28, 34'), niddk],
   },
   {
-    slug: 'mantener-despues-de-la-dieta', title: 'El mantenimiento también es una fase', topic: 'Alimentación',
-    summary: 'Llegar a una meta no elimina la necesidad de hábitos que puedas sostener.',
+    slug: 'mantener-despues-de-la-dieta', title: 'Fase de mantenimiento', topic: 'Alimentación',
+    summary: "Qué significa mantener el peso y qué datos revisar.",
     tags: ['mantenimiento', 'hambre', 'definición', 'hábitos'],
     sections: [
-      { title: 'Después de alcanzar una meta', text: 'La segunda parte de la guía trata lo que ocurre al terminar una fase de pérdida de grasa. Su idea central es planificar la continuidad: alimentación, actividad y seguimiento siguen teniendo un papel.' },
-      { title: 'Observar la transición', text: 'El hambre y el peso pueden cambiar durante esa transición. Mira cómo evolucionan junto con la rutina y el bienestar, sin interpretar cada aumento puntual como que has perdido todo el progreso.' },
-      { title: 'Lo que esta nota no calcula', text: 'No hay aquí una cifra de calorías ni una velocidad de ajuste válida para todos. Es una nota sobre hábitos y seguimiento, no una pauta de recuperación tras una preparación de competición ni un tratamiento nutricional.' },
-    ],
-    takeaway: 'Define qué hábitos continuarás cuando termine la fase, antes de darla por cerrada.', sources: [nutrition('42–45'), niddk],
+      {
+            "title": "Definición",
+            "text": "Una fase de mantenimiento busca mantener aproximadamente estable el peso a lo largo del tiempo. No implica que cada pesaje tenga que ser idéntico."
+      },
+      {
+            "title": "Seguimiento",
+            "text": "Revisa el promedio de peso junto con los registros de alimentación, actividad y entrenamiento. Un cambio en cualquiera de ellos puede modificar la tendencia."
+      },
+      {
+            "title": "Registro en la app",
+            "text": "Selecciona «Mantenimiento» como fase y guarda su fecha de inicio. Conserva los pesajes para comparar periodos de esa fase."
+      }
+],
+    takeaway: "Estabilidad de la tendencia no significa peso idéntico todos los días.", sources: [nutrition('42–45'), niddk],
   },
   {
-    slug: 'construir-musculo-y-medir-progreso', title: 'Construir músculo no es solo subir de peso', topic: 'Entrenamiento',
-    summary: 'El objetivo de una fase de construcción se interpreta también desde el entrenamiento.',
+    slug: 'construir-musculo-y-medir-progreso', title: 'Hipertrofia y progreso', topic: 'Entrenamiento',
+    summary: "Qué puede mostrar el registro y qué no mide la báscula.",
     tags: ['volumen', 'construcción', 'rendimiento', 'recuperación'],
     sections: [
-      { title: 'Qué se quiere conseguir', text: 'TNF diferencia una fase de construcción muscular de la idea de aumentar el peso por aumentarlo. La alimentación se plantea como apoyo al entrenamiento y a la recuperación, con el desarrollo muscular como objetivo.' },
-      { title: 'Varias señales, no una sola', text: 'El peso aporta contexto, pero no indica por sí mismo cuánto músculo has ganado. Los registros de entrenamiento permiten observar si mejoras en movimientos comparables y cómo se sostiene el rendimiento.' },
-      { title: 'Expectativas y tiempo', text: 'El ritmo de progreso no es constante ni igual entre personas. Antes de atribuir todo a comer más o menos, revisa la constancia, el entrenamiento y la recuperación. Esta nota no promete una cantidad de músculo ni prescribe un superávit.' },
-    ],
-    takeaway: 'Usa la báscula junto con el registro del gimnasio, no como un marcador único de crecimiento.', sources: [nutrition('45–48'), training('3')],
+      {
+            "title": "Definición",
+            "text": "Hipertrofia es el aumento del tamaño muscular. El peso corporal total no permite separar por sí solo músculo, grasa y agua."
+      },
+      {
+            "title": "Rendimiento",
+            "text": "Compara carga, repeticiones, técnica y RIR en el mismo ejercicio. Mejorar una marca muestra progreso en esa tarea; no permite convertir la mejora en kilos de músculo."
+      },
+      {
+            "title": "Seguimiento",
+            "text": "Revisa los registros de entrenamiento junto con la tendencia del peso. Si usas medidas corporales o fotografías, repite las condiciones de toma."
+      }
+],
+    takeaway: "Una subida de peso no equivale automáticamente a ganancia muscular.", sources: [nutrition('45–48'), training('3')],
   },
 ];
 

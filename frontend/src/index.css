@@ -614,3 +614,85 @@ table { border-collapse: collapse; font-variant-numeric: tabular-nums; text-alig
 .tuning-spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid var(--border); border-top-color: var(--text); border-radius: 50%; animation: tuning-spin .8s linear infinite; vertical-align: middle; margin-right: 8px; }
 @keyframes tuning-spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .tuning-spinner { animation: none; } }
+/* Compact workout logging surface */
+.training-player{max-width:720px;margin:0 auto;background:var(--surface,#fff);color:var(--text);padding:16px;border-radius:16px}
+.training-header{display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--border);padding-bottom:12px}.training-header>a{text-decoration:none;font-size:22px}.training-header>button{margin-left:auto}
+.training-clock{display:flex;gap:18px;font-size:11px}.training-clock strong{display:block;font-size:16px;font-variant-numeric:tabular-nums}
+.training-exercises{display:flex;gap:5px;overflow:auto;padding:14px 0;scroll-snap-type:x proximity}.training-exercises>button{flex:0 0 76px;padding:0;border:0;background:none;scroll-snap-align:start}.exercise-tile{display:grid;place-items:center;background:#edeef0;height:64px;border-radius:8px;font-size:24px;color:#202326}.training-exercises [aria-pressed=true] .exercise-tile{background:#17191c;color:white}.training-exercises small{display:block;font-size:10px;line-height:1.2;height:25px;overflow:hidden;margin-top:5px}
+.training-title{display:flex;align-items:center;justify-content:space-between;gap:8px}.training-title h1{font-size:22px;letter-spacing:-.5px;margin:0 0 5px}.training-title small{color:var(--text-muted);font-size:12px}
+.training-chips{display:flex;flex-wrap:wrap;gap:6px;margin:14px 0}.training-chips>*{border:0;border-radius:20px;padding:7px 10px;background:#eeeff1;color:#222;font-size:12px}
+.training-sets{width:100%;border-collapse:separate;border-spacing:3px 8px;table-layout:fixed}.training-sets th{font-weight:500;font-size:11px;text-align:center;padding:0}.training-sets th:first-child{width:30px}.training-sets th:nth-child(2){width:85px}.training-sets th:nth-last-child(-n+2){width:26px}.training-sets input{width:100%;min-width:0;text-align:center;padding:8px 2px;border:1px solid transparent;background:#eeeff1;border-radius:6px;font-size:16px;color:#17191c}.training-sets input:focus{outline:2px solid #1e1e1e;background:white}.training-sets td{padding:0;text-align:center}.training-sets td small{font-size:9px;display:block}.training-sets td button{border:0;background:none;padding:2px}.training-sets .previous-set{font-size:11px;white-space:normal}.set-number{display:inline-grid;place-items:center;width:24px;height:24px;border-radius:50%;background:#eee;color:#222;font-size:12px}.is-logged .set-number{background:#d2e9de}.set-check{font-size:24px}.add-series{border:0;background:#eee;color:#222;border-radius:6px;padding:7px 15px}.tool-body{display:grid;gap:10px;padding:12px;background:var(--bg-raised);border-radius:10px}.tool-body label{display:grid;gap:5px;font-size:12px}.tool-body input,.tool-body select{max-width:100%;min-width:0}.tool-body p{margin:0;font-size:13px}.tool-body small{font-size:11px}.plate-visual{display:flex;gap:5px;align-items:center;min-height:48px;border-bottom:4px solid #9c9fa4}.plate-visual span{padding:10px;background:#24272b;color:white;border-radius:3px;font-size:12px}.readiness{border:1px solid var(--border);border-radius:10px;padding:12px;margin-top:12px}.readiness h2{font-size:16px;margin:0 0 10px}.readiness-fields{display:flex;gap:8px}.readiness-fields label{flex:1;min-width:0;font-size:11px}.readiness-fields select{width:100%;font-size:13px;padding:7px}.readiness>button{margin:10px 8px 0 0}.exercise-picker-list{display:grid;gap:4px;max-height:300px;overflow:auto}.exercise-picker-list button{text-align:left;padding:10px}.exercise-picker-list small{display:block}.finish-options{display:grid;gap:10px}.training-player .panel{padding:12px;margin:12px 0}.training-player .exercise-progress-link{display:block;margin-top:14px;font-size:12px}
+@media(max-width:600px){.training-player{padding:8px;border-radius:0}.training-title h1{font-size:19px}.training-sets th:nth-child(2){width:65px}.training-clock{gap:12px}.training-player .panel{max-width:100%}.training-sets input{padding:9px 0}.training-exercises>button{flex-basis:65px}}
+@media(max-width:600px){.app-shell:has(.training-player){display:block}.app-shell:has(.training-player) .sidebar,.app-shell:has(.training-player) .workspace-header{display:none}.app-shell:has(.training-player) .workspace-main{padding:8px}.app-shell:has(.training-player) .workspace{margin:0;min-width:0}}
+.session-page:has(.training-player){padding:12px;align-items:stretch}.training-player{width:100%;min-width:0}.training-exercises{min-width:0;max-width:100%}.training-title>div{min-width:0}.training-title h1{overflow-wrap:anywhere}.training-header>button{border:0;border-radius:6px;padding:7px 10px;background:#17191c;color:white}.training-title>button{border:0;background:#eeeff1;color:#222;padding:7px;border-radius:6px;white-space:nowrap}
+@media(max-width:600px){.session-page:has(.training-player){padding:8px 4px}.training-sets th:nth-child(2){width:59px}.training-sets th:nth-last-child(-n+2){width:22px}.training-sets input{font-size:15px}}
+
+@media (min-width: 768px) {
+  .session-page:has(.training-player) { padding: 36px 24px; }
+  .training-player { max-width: 760px; padding: 28px 32px; border: 1px solid var(--border); }
+  .training-header { padding-bottom: 18px; }
+  .training-clock { gap: 28px; font-size: 12px; }
+  .training-clock strong { font-size: 20px; }
+  .training-exercises { gap: 10px; padding: 20px 0 24px; }
+  .training-exercises > button { flex-basis: 100px; }
+  .training-exercises small { height: auto; min-height: 30px; font-size: 12px; line-height: 1.3; }
+  .exercise-tile { height: 72px; }
+  .training-title h1 { font-size: 26px; }
+  .training-chips { margin: 18px 0; }
+  .training-sets { border-spacing: 8px 12px; }
+  .training-sets th { font-size: 12px; }
+  .training-sets th:first-child { width: 42px; }
+  .training-sets th:nth-child(2) { width: 115px; }
+  .training-sets th:nth-last-child(-n+2) { width: 36px; }
+  .training-sets .previous-set { font-size: 13px; }
+  .training-sets input { padding: 12px 6px; }
+  .training-player .tool-body { padding: 18px; gap: 12px; }
+}
+.training-exercises{align-items:flex-start;padding-top:20px}.training-exercises>button{display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;transform:none;transition:transform .15s ease}.training-exercises>button[aria-pressed=true]{transform:translateY(-6px)}.training-exercises small{height:46px;min-height:46px}.readiness-screen{width:100%;max-width:520px;margin:60px auto;padding:28px;background:var(--surface,#fff)}.readiness-screen h1{font-size:26px;margin:24px 0}.readiness-screen .readiness-fields{flex-direction:column;gap:18px}.readiness-screen select{min-height:44px;font-size:16px}.readiness-screen>button{border:1px solid var(--border);padding:10px 14px;border-radius:8px}.readiness-screen>button:first-of-type{background:#17191c;color:white}@media(max-width:600px){.readiness-screen{margin:20px auto;padding:20px}}
+.finish-screen{width:100%;max-width:560px;margin:60px auto;padding:28px;gap:18px}.finish-screen h1{font-size:26px;margin:0}.finish-screen p{margin:0;line-height:1.5}.finish-screen>button:last-child{border:1px solid var(--border);border-radius:8px;padding:10px 14px;background:transparent;color:var(--text)}@media(max-width:600px){.finish-screen{margin:20px auto;padding:20px}}
+
+/* Google sign-in: shared mobile and desktop visual identity. */
+.google-login{min-height:100dvh;display:grid;grid-template-columns:1fr 1fr;background:#fff;color:#111}
+.login-character{background:#080808;color:white;position:relative;display:flex;align-items:center;justify-content:center;min-height:540px;overflow:hidden}
+.login-wordmark{position:absolute;top:36px;left:40px;color:white;text-decoration:none;line-height:1.15;font-size:18px}
+.login-character svg{width:min(76%,430px);overflow:visible;--look-x:0px;--look-y:0px}
+.athlete-head{transform:translate(var(--look-x),var(--look-y));transition:transform .18s ease-out;transform-origin:200px 130px}
+.athlete-eyes{transform:translate(calc(var(--look-x)*.3),calc(var(--look-y)*.3))}
+.athlete-arm{transition:transform .65s ease;transform-box:view-box}.athlete-arm.left{transform-origin:143px 165px}.athlete-arm.right{transform-origin:257px 165px}
+.login-character.success .athlete-arm.left{transform:rotate(115deg)}.login-character.success .athlete-arm.right{transform:rotate(-115deg)}
+.login-character.error .athlete-head{animation:athlete-no .4s 2}.login-character.busy .athlete{animation:athlete-breathe 1s infinite alternate}
+.character-caption{position:absolute;bottom:42px;font-size:16px;min-height:24px}
+.google-login-content{position:relative;display:flex;align-items:center;justify-content:center;padding:70px 28px}
+.google-login-info{position:absolute;right:32px;top:32px;color:#333;font-size:14px;text-decoration:none}
+.google-login-form{width:100%;max-width:360px;text-align:center}.google-login-form h1{font-size:clamp(28px,3vw,40px);letter-spacing:-1.5px;margin:24px 0 10px}.google-login-form>p{color:#666;font-size:14px}
+.login-account-icon{display:inline-grid;place-items:center;width:40px;height:40px;border-radius:50%;background:#eee;color:#999}
+.google-button-host{display:flex;justify-content:center;margin-top:38px;min-height:44px}.google-button-host[hidden]{display:none}
+.google-placeholder{border:1px solid #ddd;border-radius:30px;background:#f5f5f5;color:#555;height:46px;width:280px;max-width:100%;margin-top:12px;font:inherit}
+.google-login-form .google-login-footnote{font-size:12px;margin-top:28px}
+@keyframes athlete-no{25%{transform:rotate(-8deg)}75%{transform:rotate(8deg)}}@keyframes athlete-breathe{to{transform:translateY(-5px)}}
+@media(max-width:650px){.google-login{grid-template-columns:1fr;grid-template-rows:38dvh 1fr}.login-character{min-height:240px}.login-character svg{height:90%;width:auto;margin-top:28px}.login-wordmark{top:20px;left:22px;font-size:14px}.character-caption{bottom:12px;right:20px;font-size:13px}.google-login-content{padding:54px 24px 30px;align-items:flex-start}.google-login-info{top:18px;right:24px}.google-login-form h1{margin-top:14px}.google-button-host{margin-top:26px}}
+@media(prefers-reduced-motion:reduce){.login-character *{animation:none!important;transition:none!important}.athlete-head,.athlete-eyes{transform:none!important}}
+
+.sun-follow{transform:translate(var(--look-x),var(--look-y));transition:transform .3s ease-out}
+.sun-float{animation:sun-float 3s ease-in-out infinite;transform-origin:200px 220px}
+.sun-rays{transform-origin:200px 220px;animation:sun-spin 24s linear infinite}
+.sun-face{transform:translate(calc(var(--look-x)*.15),calc(var(--look-y)*.15));transition:transform .2s}
+.sun-face ellipse{transform-origin:center;transform-box:fill-box;animation:sun-blink 5s infinite}
+.sun-shadow{transform-origin:200px 355px;animation:sun-shadow 3s ease-in-out infinite}
+.success .sun-float{animation:sun-yes .7s ease-in-out}.error .sun-follow{animation:athlete-no .3s 2;transform-origin:200px 220px}.busy .sun-rays{animation-duration:2s}
+.email-login-form{display:grid;gap:18px;text-align:left;margin-top:30px}.email-login-form input{width:100%}.email-login-form>a{text-align:center;font-size:14px;color:#444}.email-login-form .btn-primary{width:100%;margin-top:6px}
+@keyframes sun-float{0%,100%{transform:translateY(10px) rotate(-5deg)}50%{transform:translateY(-12px) rotate(5deg)}}
+@keyframes sun-spin{to{transform:rotate(360deg)}}
+@keyframes sun-blink{0%,43%,47%,100%{transform:scaleY(1)}45%{transform:scaleY(.1)}}
+@keyframes sun-shadow{0%,100%{transform:scaleX(1)}50%{transform:scaleX(.7)}}
+@keyframes sun-yes{30%{transform:translateY(-25px) scale(1.1)}65%{transform:translateY(8px) scale(.95)}100%{transform:none}}
+@media(prefers-reduced-motion:reduce){.sun-follow,.sun-face{transform:none!important}}
+
+.login-wordmark{display:flex;align-items:center;gap:14px;font-size:23px;letter-spacing:-.6px}
+.login-character .login-wordmark svg{width:40px;height:40px;margin:0;flex:none}
+.sun-face{transform:translate(calc(var(--look-x)*.55),calc(var(--look-y)*.6));transition:transform .12s ease-out}
+.sun-closed-eyes{opacity:0;transition:opacity .12s}.sun-open-eyes{opacity:1;transition:opacity .12s}
+.eyes-closed .sun-open-eyes{opacity:0}.eyes-closed .sun-closed-eyes{opacity:1}
+.eyes-closed .sun-face{transform:translateY(3px)}
+.error .sun-rays{animation-duration:6s}.error .sun-open-eyes ellipse{animation:none}
+@media(max-width:650px){.login-wordmark{font-size:18px;gap:10px}.login-character .login-wordmark svg{width:32px;height:32px}}
