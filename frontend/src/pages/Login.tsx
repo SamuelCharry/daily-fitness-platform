@@ -14,6 +14,57 @@ export default function Login({ createAccount = false }: { createAccount?: boole
   useEffect(() => { loginRef.current = googleLogin; }, [googleLogin]);
   const button = useRef<HTMLDivElement>(null);
   const figure = useRef<SVGSVGElement>(null);
+  const page = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const root = page.current, svg = figure.current;
+    if (!root || !svg) return;
+    const preference = window.matchMedia('(prefers-reduced-motion: reduce)');
+    let frame = 0, x = 0, y = 0, targetX = 0, targetY = 0, last = 0;
+    let width = window.innerWidth, height = window.innerHeight;
+    const resize = () => { width = window.innerWidth; height = window.innerHeight; };
+    const paint = (time: number) => {
+      frame = 0;
+      if (document.hidden || preference.matches) return;
+      const blend = 1 - Math.exp(-Math.min(time - (last || time - 16), 50) / 65);
+      last = time;
+      x += (targetX - x) * blend; y += (targetY - y) * blend;
+      const follow = svg.querySelector<SVGGElement>('.sun-follow');
+      const face = svg.querySelector<SVGGElement>('.sun-face');
+      if (follow) follow.style.transform = `translate(${x.toFixed(2)}px,${y.toFixed(2)}px)`;
+      if (face) face.style.transform = `translate(${(x*.55).toFixed(2)}px,${(y*.6).toFixed(2)}px)`;
+      if (Math.abs(targetX-x) + Math.abs(targetY-y) > .05) frame = requestAnimationFrame(paint);
+      else last = 0;
+    };
+    const schedule = () => { if (!frame && !document.hidden && !preference.matches) frame = requestAnimationFrame(paint); };
+    const move = (event: PointerEvent) => {
+      if (event.pointerType === 'touch' || preference.matches) return;
+      targetX = (event.clientX / width - .5)*48;
+      targetY = (event.clientY / height - .5)*32;
+      schedule();
+    };
+    const leave = () => { targetX = targetY = 0; schedule(); };
+    const visibility = () => {
+      root.classList.toggle('motion-paused', document.hidden || preference.matches);
+      if (frame) cancelAnimationFrame(frame);
+      frame = 0; last = 0;
+      if (preference.matches) {
+        svg.querySelector<SVGGElement>('.sun-follow')?.style.removeProperty('transform');
+        svg.querySelector<SVGGElement>('.sun-face')?.style.removeProperty('transform');
+      } else schedule();
+    };
+    root.addEventListener('pointermove', move, {passive:true});
+    root.addEventListener('pointerleave', leave);
+    window.addEventListener('resize', resize);
+    document.addEventListener('visibilitychange', visibility);
+    preference.addEventListener('change', visibility);
+    visibility();
+    return () => {
+      cancelAnimationFrame(frame);
+      root.removeEventListener('pointermove', move); root.removeEventListener('pointerleave', leave);
+      window.removeEventListener('resize', resize); document.removeEventListener('visibilitychange', visibility);
+      preference.removeEventListener('change', visibility);
+    };
+  }, []);
   const [status, setStatus] = useState<'loading' | 'ready' | 'missing' | 'busy' | 'success' | 'error'>('loading');
   const [error, setError] = useState('');
   const [email, setEmail] = useState('');
@@ -69,13 +120,7 @@ export default function Login({ createAccount = false }: { createAccount?: boole
     }).catch(() => { if (active) { setStatus('error'); setError('No se pudo conectar. Recarga la página.'); } });
     return () => { active = false; clearTimeout(timer); script?.remove(); };
   }, [navigate]);
-  return <main className="google-login" onPointerMove={event => {
-    if (event.pointerType === 'touch' || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    const x = (event.clientX / window.innerWidth - .5) * 48;
-    const y = (event.clientY / window.innerHeight - .5) * 32;
-    figure.current?.style.setProperty('--look-x', `${x}px`);
-    figure.current?.style.setProperty('--look-y', `${y}px`);
-  }}>
+  return <main ref={page} className="google-login">
     <section className={`login-character ${status} ${passwordFocused ? 'eyes-closed' : ''}`} aria-label="Sol animado">
       <Link to="/" className="login-wordmark"><Icon name="sun"/><span>cool for<br/><strong>the summer</strong></span></Link>
       <svg ref={figure} viewBox="0 0 400 440" role="img" aria-label="Sol minimalista animado">

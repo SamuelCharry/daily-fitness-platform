@@ -734,3 +734,9 @@ table { border-collapse: collapse; font-variant-numeric: tabular-nums; text-alig
  .training-sets td:last-child button{min-width:44px}
  .training-player summary{min-height:44px;padding:12px;font-size:14px;cursor:pointer}
 }
+
+/* Cursor motion writes only two transforms, once per animation frame. */
+.sun-follow,.sun-face{transition:none;will-change:transform}
+.sun-float,.sun-rays{will-change:transform}
+.eyes-closed .sun-face{transform:translateY(3px)!important}
+.motion-paused .login-character *{animation-play-state:paused!important}
