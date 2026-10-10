@@ -42,6 +42,20 @@ class PersistenceAndAccessTests(unittest.TestCase):
         engine.dispose()
         temporary.cleanup()
 
+    def test_delete_workout_with_exercises_and_session(self):
+        h = self.headers
+        ex = self.client.get('/api/exercises', headers=h).json()[0]
+        r = self.client.post('/api/routines', headers=h, json={'name':'Delete regression'}).json()
+        w = self.client.post(f"/api/routines/{r['id']}/workouts", headers=h, json={'name':'Delete day','exercises':[{'exercise_id':ex['id'],'target_sets':3}]}).json()
+        session = self.client.post('/api/sessions', headers=h, json={'workout_id':w['id']}).json()
+        self.client.post(f"/api/sessions/{session['id']}/sets", headers=h, json={'workout_exercise_id':w['exercises'][0]['id'],'set_number':1,'weight':20,'reps':8})
+        self.assertEqual(self.client.delete(f"/api/workouts/{w['id']}", headers=h).status_code,204)
+        routines = self.client.get('/api/routines', headers=h).json()
+        self.assertEqual(next(x for x in routines if x['id']==r['id'])['workouts'],[])
+        w2 = self.client.post(f"/api/routines/{r['id']}/workouts", headers=h, json={'name':'Another day','exercises':[{'exercise_id':ex['id'],'target_sets':2}]}).json()
+        self.assertEqual(self.client.delete(f"/api/routines/{r['id']}", headers=h).status_code,204)
+        self.assertNotIn(r['id'],[x['id'] for x in self.client.get('/api/routines',headers=h).json()])
+
     def test_google_identity_and_rejections(self):
         from app.routers.auth import attempts
         attempts.clear()

@@ -60,6 +60,7 @@ function WorkoutCard({ workout, exercisesLibrary, volumeByMuscle, highlightMuscl
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [error, setError] = useState('');
   const [duplicating, setDuplicating] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [duplicateId, setDuplicateId] = useState<number | null>(null);
   // Local copy is the source of truth for rendering: PUTs are debounced, so editing two
   // cells from `workout.exercises` would race. It resyncs only on a genuine day switch.
@@ -176,8 +177,16 @@ function WorkoutCard({ workout, exercisesLibrary, volumeByMuscle, highlightMuscl
 
   async function deleteWorkout() {
     if (!window.confirm(`¿Eliminar «${workout.name}»? Se borran sus ejercicios y las sesiones registradas de este día.`)) return;
-    await api.delete(`/api/workouts/${workout.id}`);
-    onDeleted();
+    if (deleting) return;
+    setDeleting(true); setError('');
+    try {
+      if (saveTimeout.current) { clearTimeout(saveTimeout.current); saveTimeout.current = null; }
+      pending.current = null;
+      await saveQueue.current;
+      await api.delete(`/api/workouts/${workout.id}`);
+      onDeleted();
+    } catch (err) { setError(err instanceof Error ? err.message : 'No se pudo eliminar el día. Intenta de nuevo.'); }
+    finally { setDeleting(false); }
   }
 
   async function duplicateWorkout() {
@@ -213,7 +222,7 @@ function WorkoutCard({ workout, exercisesLibrary, volumeByMuscle, highlightMuscl
         <div className="routine-actions">
           <Link className="btn-ghost" to={`/app/session/${workout.id}`}>Entrenar</Link>
           <button className="btn-ghost" disabled={duplicating} onClick={duplicateWorkout}>{duplicating ? 'Duplicando…' : 'Duplicar día'}</button>
-          <button className="quiet-button" onClick={deleteWorkout}>Eliminar</button>
+          <button className="quiet-button" disabled={deleting} onClick={deleteWorkout}>{deleting ? 'Eliminando…' : 'Eliminar'}</button>
         </div>
       </div>
 

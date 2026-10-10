@@ -124,7 +124,8 @@ def _cascade_delete_workout(workout: Workout, db: Session):
         )
     db.query(WorkoutExercise).filter(WorkoutExercise.workout_id == workout.id).delete(synchronize_session=False)
     db.query(ScheduleMove).filter(ScheduleMove.workout_id == workout.id).delete(synchronize_session=False)
-    db.delete(workout)
+    # Children were deleted in bulk; do not flush stale loaded relationships.
+    db.query(Workout).filter(Workout.id == workout.id).delete(synchronize_session=False)
 
 
 @router.get("/routines")
@@ -179,7 +180,7 @@ def delete_routine(
     for workout in list(routine.workouts):
         _cascade_delete_workout(workout, db)
     db.query(RoutineTuning).filter(RoutineTuning.routine_id == routine.id).delete()
-    db.delete(routine)
+    db.query(Routine).filter(Routine.id == routine.id).delete(synchronize_session=False)
     db.commit()
 
 
