@@ -696,3 +696,41 @@ table { border-collapse: collapse; font-variant-numeric: tabular-nums; text-alig
 .eyes-closed .sun-face{transform:translateY(3px)}
 .error .sun-rays{animation-duration:6s}.error .sun-open-eyes ellipse{animation:none}
 @media(max-width:650px){.login-wordmark{font-size:18px;gap:10px}.login-character .login-wordmark svg{width:32px;height:32px}}
+
+/* Mobile sessions fill the viewport; controls remain usable with the native keyboard. */
+@media(max-width:767px){
+  body:has(.session-page){background:var(--bg-alt)}
+  .session-page,.session-page:has(.training-player){width:100%;max-width:none;min-height:100dvh;margin:0;padding:0;gap:0;background:var(--bg-alt)}
+  .training-player{max-width:none;min-height:100dvh;margin:0;border:0;border-radius:0;padding:max(12px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) max(24px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left));background:var(--bg-alt)}
+  .training-header{position:sticky;top:0;z-index:10;background:var(--bg-alt);min-height:60px;padding:8px 0;gap:12px}
+  .training-header>a{display:grid;place-items:center;min-width:44px;min-height:44px;color:var(--text)}
+  .training-header>button,.training-title>button{min-height:44px;padding:10px 14px;font-size:14px}
+  .training-clock{gap:14px;font-size:12px}.training-clock strong{font-size:18px}
+  .training-exercises{gap:8px;padding:22px 0 16px}.training-exercises>button{flex-basis:78px;color:var(--text);touch-action:manipulation}.training-exercises small{font-size:11px;line-height:1.3}
+  .training-title h1{font-size:24px}.training-title small{font-size:13px}
+  .training-chips{gap:8px;margin:18px 0}.training-chips>button{min-height:44px;padding:10px 14px;font-size:14px}
+  .training-sets{display:block;border-spacing:0}.training-sets thead,.training-sets tbody{display:block}
+  .training-sets tr{display:grid;grid-template-columns:24px repeat(3,minmax(0,1fr)) 44px 36px;gap:5px;align-items:center}
+  .training-sets thead tr{margin:4px 0 8px}.training-sets th{width:auto!important;font-size:12px}.training-sets th:nth-child(2){display:none}
+  .training-sets tbody tr{padding:10px 0;border-bottom:1px solid var(--border)}
+  .training-sets td:nth-child(2){grid-row:2;grid-column:2 / -1;text-align:left}
+  .training-sets td:nth-child(2)::before{content:'Anterior: ';font-size:12px;color:var(--text-muted)}
+  .training-sets td:nth-child(3){grid-column:2;grid-row:1}.training-sets td:nth-child(4){grid-column:3;grid-row:1}.training-sets td:nth-child(5){grid-column:4;grid-row:1}.training-sets td:nth-child(6){grid-column:5;grid-row:1}.training-sets td:nth-child(7){grid-column:6;grid-row:1}
+  .training-sets input{height:48px;font-size:16px;padding:10px 0;background:var(--bg-raised);color:var(--text);border-color:var(--border)}
+  .training-sets td button{min-height:44px;min-width:36px;color:var(--text)}.training-sets .set-check{min-width:44px;font-size:28px;border-radius:8px;background:var(--bg-raised)}.training-sets .set-check[aria-pressed=true]{background:var(--success-soft);color:var(--success)}
+  .training-sets .previous-set{font-size:13px;padding:8px}.training-sets td:last-child button{font-size:22px;color:var(--text-muted)}
+  .add-series{min-height:44px;margin-top:16px;padding:10px 18px;font-size:15px}
+  .training-player .exercise-progress-link{min-height:44px;padding:12px 0;font-size:14px;color:var(--text)}
+  .readiness-screen,.finish-screen{display:flex;flex-direction:column;width:100%;max-width:none;min-height:100dvh;margin:0;border:0;border-radius:0;padding:max(20px,env(safe-area-inset-top)) 20px max(24px,env(safe-area-inset-bottom));background:var(--bg-alt);gap:16px}
+  .readiness-screen>a{min-height:44px;display:flex;align-items:center;color:var(--text)}
+  .readiness-screen h1,.finish-screen h1{font-size:28px;margin:8px 0 12px}.readiness-screen .readiness-fields{gap:24px;margin-bottom:24px}.readiness-screen .readiness-fields label{font-size:14px;display:grid;gap:8px}.readiness-screen select{min-height:52px;font-size:16px}
+  .readiness-screen>button,.finish-screen>button{width:100%;min-height:52px;margin:0;font-size:16px;color:var(--text)}
+  .readiness-screen>button:first-of-type{margin-top:auto}.finish-screen>button:first-of-type{margin-top:auto}.finish-screen>button.btn-primary{color:var(--accent-text)}
+}
+
+@media(max-width:767px){
+ .training-exercises{scrollbar-width:none}.training-exercises::-webkit-scrollbar{display:none}
+ .training-sets tr{grid-template-columns:24px repeat(3,minmax(0,1fr)) 44px 44px}
+ .training-sets td:last-child button{min-width:44px}
+ .training-player summary{min-height:44px;padding:12px;font-size:14px;cursor:pointer}
+}
